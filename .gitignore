@@ -19,3 +19,9 @@ pnpm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+
+# Prisma agent skills
+backend/.agents/
+backend/.claude/
+backend/.cursor/
+backend/.devin/
