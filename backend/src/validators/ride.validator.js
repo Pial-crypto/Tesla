@@ -1,12 +1,12 @@
 const ZONES = [
-  "GULSHAN",
-  "BANANI",
-  "UTTARA",
-  "MIRPUR",
-  "DHANMONDI",
-  "MOHAMMADPUR",
-  "BASHUNDHARA",
-  "MOTIJHEEL",
+ "Banani",
+  "Mohakhali",
+  "Gulshan 1",
+  "Farmgate",
+  "Uttara",
+  "Dhanmondi",
+  "Mirpur",
+  "Bashundhara",
 ];
 
 function validateRideRequest(body) {

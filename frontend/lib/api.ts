@@ -62,6 +62,7 @@ export async function api<T = unknown>(
 
   try {
     data = (await res.json()) as T;
+    console.log("data is here",data)
   } catch {
     // Response was not JSON
   }

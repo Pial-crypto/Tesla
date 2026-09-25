@@ -1,8 +1,10 @@
 import { db } from "../prisma/db.ts";
+
 import {
   validateRideRequest,
   validateFareEstimate,
 } from "../validators/ride.validator.js";
+
 import { calcFare } from "../utils/fare.js";
 
 async function createRide(userId, body) {
@@ -39,7 +41,7 @@ async function createRide(userId, body) {
     pickup,
     destination,
     seats,
-    false
+    false,
   );
 
   const ride = await db.orm.public.Ride.create({
@@ -63,13 +65,17 @@ async function createRide(userId, body) {
 }
 
 async function getPassengerRides(userId) {
-  return db.orm.public.Ride
+  console.log("Here is user id", userId);
+
+  const rides = await db.orm.public.Ride
     .where({
       passengerId: userId,
     })
-    .orderBy({
-      createdAt: "desc",
-    });
+    .all();
+
+  console.log("Passenger rides:", rides);
+
+  return rides;
 }
 
 async function estimateFare(query) {
@@ -83,14 +89,14 @@ async function estimateFare(query) {
     from,
     to,
     seats,
-    false
+    false,
   );
 
   const pooled = calcFare(
     from,
     to,
     seats,
-    true
+    true,
   );
 
   return {

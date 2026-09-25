@@ -10,21 +10,20 @@ import {
 
 const router = Router();
 
-// Passenger ride request
+
 router.post(
   "/",
   authMiddleware("PASSENGER"),
   createRideRequest
 );
 
-// Passenger's own ride history/list
 router.get(
   "/",
   authMiddleware("PASSENGER"),
   getMyRides
 );
 
-// Fare estimation
+
 router.get(
   "/fare/estimate",
   authMiddleware("PASSENGER"),

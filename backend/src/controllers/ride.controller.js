@@ -25,6 +25,7 @@ async function getMyRides(req, res, next) {
     const rides = await getPassengerRides(
       req.user.id
     );
+    console.log("Here is the rq")
 
     res.json({
       success: true,

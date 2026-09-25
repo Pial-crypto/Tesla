@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { ActiveRide } from "@/components/passenger/ActiveRide";
 import { ErrorAlert } from "@/components/passenger/ErrorAlert";
 import { Header } from "@/components/passenger/Header";
@@ -9,29 +10,42 @@ import { PassengerHero } from "@/components/passenger/PassengerHero";
 import { PoolingInfo } from "@/components/passenger/PoolingInfo";
 import { RideHistory } from "@/components/passenger/RideHistory";
 import { RideRequestForm } from "@/components/passenger/RideRequestForm";
+
 import { api, clearSession, getUser } from "@/lib/api";
 import { getErrorMessage } from "@/lib/ride";
+
 import type { User } from "@/types/auth";
-import type { FareEstimate, PaymentMethod, Ride, RideHistoryEvent } from "@/types/ride";
+import type {
+  FareEstimate,
+  PaymentMethod,
+  Ride,
+  RideHistoryEvent,
+} from "@/types/ride";
 
 export default function PassengerPage() {
   const router = useRouter();
 
-  const [user] = useState<User | null>(() => getUser());
+  const [user, setUser] = useState<User | null | undefined>(undefined);
   const [pickup, setPickup] = useState("Banani");
   const [destination, setDestination] = useState("Mohakhali");
   const [seats, setSeats] = useState(1);
   const [payment, setPayment] = useState<PaymentMethod>("CASH");
   const [estimate, setEstimate] = useState<FareEstimate | null>(null);
   const [rides, setRides] = useState<Ride[]>([]);
-  const [history, setHistory] = useState<Record<string, RideHistoryEvent[] | null>>({});
+  const [history, setHistory] = useState<
+    Record<string, RideHistoryEvent[] | null>
+  >({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    setUser(getUser());
+  }, []);
 
   const load = useCallback(async () => {
     try {
       const data = await api<Ride[]>("/rides");
-      setRides(data);
+      setRides(data.rides);
       setError("");
     } catch (loadError: unknown) {
       setError(getErrorMessage(loadError));
@@ -39,7 +53,11 @@ export default function PassengerPage() {
   }, []);
 
   useEffect(() => {
-    if (!user) {
+    if (user === undefined) {
+      return;
+    }
+
+    if (user === null) {
       router.replace("/");
       return;
     }
@@ -51,20 +69,37 @@ export default function PassengerPage() {
 
     void load();
 
-    const timer = setInterval(() => void load(), 4000);
-    return () => clearInterval(timer);
-  }, [load, router, user]);
+    const timer = window.setInterval(() => {
+      void load();
+    }, 4000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [user, router, load]);
 
   useEffect(() => {
+    if (user === undefined || user === null) {
+      return;
+    }
+
+    if (user.role !== "PASSENGER") {
+      return;
+    }
+
     if (pickup === destination) {
+      setEstimate(null);
       return;
     }
 
     const fetchEstimate = async () => {
       try {
         const data = await api<FareEstimate>(
-          `/fare/estimate?from=${encodeURIComponent(pickup)}&to=${encodeURIComponent(destination)}&seats=${seats}`,
+          `/fare/estimate?from=${encodeURIComponent(
+            pickup,
+          )}&to=${encodeURIComponent(destination)}&seats=${seats}`,
         );
+
         setEstimate(data);
       } catch {
         setEstimate(null);
@@ -72,16 +107,21 @@ export default function PassengerPage() {
     };
 
     void fetchEstimate();
-  }, [pickup, destination, seats]);
+  }, [user, pickup, destination, seats]);
 
   const active = rides.find((ride) =>
-    ["REQUESTED", "MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(ride.status),
+    ["REQUESTED", "MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(
+      ride.status,
+    ),
   );
 
-  const past = rides.filter((ride) => ["COMPLETED", "CANCELLED"].includes(ride.status));
+  const past = rides.filter((ride) =>
+    ["COMPLETED", "CANCELLED"].includes(ride.status),
+  );
 
   const handlePickupChange = (value: string) => {
     setPickup(value);
+
     if (value === destination) {
       setEstimate(null);
     }
@@ -89,6 +129,7 @@ export default function PassengerPage() {
 
   const handleDestinationChange = (value: string) => {
     setDestination(value);
+
     if (value === pickup) {
       setEstimate(null);
     }
@@ -96,6 +137,7 @@ export default function PassengerPage() {
 
   const handleSeatsChange = (value: number) => {
     setSeats(value);
+
     if (pickup === destination) {
       setEstimate(null);
     }
@@ -103,6 +145,7 @@ export default function PassengerPage() {
 
   async function requestRide(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     setError("");
     setBusy(true);
 
@@ -116,6 +159,7 @@ export default function PassengerPage() {
           paymentMethod: payment,
         },
       });
+
       await load();
     } catch (requestError: unknown) {
       setError(getErrorMessage(requestError));
@@ -126,8 +170,12 @@ export default function PassengerPage() {
 
   async function cancelRide(id: string) {
     setError("");
+
     try {
-      await api(`/rides/${id}/cancel`, { method: "POST" });
+      await api(`/rides/${id}/cancel`, {
+        method: "POST",
+      });
+
       await load();
     } catch (cancelError: unknown) {
       setError(getErrorMessage(cancelError));
@@ -136,13 +184,23 @@ export default function PassengerPage() {
 
   async function toggleHistory(id: string) {
     if (history[id]) {
-      setHistory((current) => ({ ...current, [id]: null }));
+      setHistory((current) => ({
+        ...current,
+        [id]: null,
+      }));
+
       return;
     }
 
     try {
-      const timeline = await api<RideHistoryEvent[]>(`/rides/${id}/history`);
-      setHistory((current) => ({ ...current, [id]: timeline }));
+      const timeline = await api<RideHistoryEvent[]>(
+        `/rides/${id}/history`,
+      );
+
+      setHistory((current) => ({
+        ...current,
+        [id]: timeline,
+      }));
     } catch (toggleError: unknown) {
       setError(getErrorMessage(toggleError));
     }
@@ -150,10 +208,17 @@ export default function PassengerPage() {
 
   function logout() {
     clearSession();
+    setUser(null);
     router.replace("/");
   }
 
-  if (!user) return null;
+  if (user === undefined) {
+    return null;
+  }
+
+  if (user === null) {
+    return null;
+  }
 
   return (
     <main className="min-h-screen bg-[#070b14] text-white">
@@ -186,11 +251,16 @@ export default function PassengerPage() {
               onPaymentChange={setPayment}
               onSubmit={requestRide}
             />
+
             <PoolingInfo />
           </section>
         )}
 
-        <RideHistory past={past} history={history} onToggleHistory={toggleHistory} />
+        <RideHistory
+          past={past}
+          history={history}
+          onToggleHistory={toggleHistory}
+        />
       </div>
     </main>
   );
