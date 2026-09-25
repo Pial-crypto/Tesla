@@ -1,9 +1,14 @@
 import express from "express";
 import { migrateAndSeed } from "./db.js";
+import authRoutes from "./routes/auth.routes.js";
+import errorMiddleware from "./middleware/error.middleware.js";
 
 const app = express();
 
 app.use(express.json());
+
+app.use("/api/auth", authRoutes);
+app.use(errorMiddleware);
 
 app.get("/api/health", (req, res) => {
   res.json({
