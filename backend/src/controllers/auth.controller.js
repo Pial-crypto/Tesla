@@ -1,4 +1,5 @@
 import * as authService from "../services/auth.service.js";
+import { signToken } from "../utils/auth.js";
 
 async function signup(req, res) {
   const { name, email, password, role = "PASSENGER" } = req.body;
@@ -49,15 +50,20 @@ async function login(req, res) {
     password,
   });
 
-  res.json({
-    success: true,
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      role: user.role,
-    },
-  });
+const token = signToken(user);
+
+res.json({
+  success: true,
+  token,
+  user: {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    role: user.role,
+  },
+});
 }
+
+
 
 export { signup, login };
