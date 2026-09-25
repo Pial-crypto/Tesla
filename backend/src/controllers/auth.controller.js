@@ -2,7 +2,9 @@ import * as authService from "../services/auth.service.js";
 import { signToken } from "../utils/auth.js";
 
 async function signup(req, res) {
+    console.log("request in sighnup")
   const { name, email, password, role = "PASSENGER" } = req.body;
+  console.log("Signup request body:", req.body);
 
   if (
     !name ||

@@ -6,11 +6,11 @@ const router = Router();
 
 router.post("/signup", asyncHandler(signup));
 router.post("/login", asyncHandler(login));
-router.get("/me", authMiddleware(), (req, res) => {
-  res.json({
-    success: true,
-    user: req.user,
-  });
-});
+// router.get("/me", authMiddleware(), (req, res) => {
+//   res.json({
+//     success: true,
+//     user: req.user,
+//   });
+// });
 
 export default router;

@@ -2,8 +2,14 @@ import express from "express";
 import { migrateAndSeed } from "./db.js";
 import authRoutes from "./routes/auth.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
-
+import cors from "cors";
 const app = express();
+app.use(
+  cors({
+    origin: "http://localhost:3000",
+    credentials: true,
+  })
+);
 
 app.use(express.json());
 
