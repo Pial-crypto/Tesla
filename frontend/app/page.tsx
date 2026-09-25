@@ -6,7 +6,7 @@ import { api, setSession, getUser } from "../lib/api";
 import { MobileLogo } from "@/components/auth/MobileLogo";
 import { Form } from "@/components/auth/Form";
 import { BrandSection } from "@/components/auth/BrandSection";
-import { loginData, signupData } from "@/types/auth";
+import { SignupData,LoginData } from "@/types/auth";
 
 
 export default function Home() {
@@ -51,7 +51,7 @@ export default function Home() {
       const path =
         mode === "login" ? "/auth/login" : "/auth/signup";
 
-      const body: signupData | loginData =
+      const body: SignupData | LoginData =
         mode === "login"
           ? {
               email: form.email,

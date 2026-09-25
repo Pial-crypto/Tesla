@@ -1,7 +1,5 @@
 // use prisma-8
 
-// use prisma-8
-
 enum UserRole {
   DRIVER
   PASSENGER
@@ -16,4 +14,69 @@ model User {
 
   createdAt    TimestamptzString @default(now())
   updatedAt    temporal.updatedAtString()
+
+  rides        Ride[]
+}
+
+model Vehicle {
+  id       Int    @id @default(autoincrement())
+  name     String
+  driverId Int    @unique
+  capacity Int
+
+  driver   User   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+}
+
+
+
+enum RideStatus {
+  REQUESTED
+  MATCHED
+  DRIVER_ARRIVED
+  STARTED
+  COMPLETED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  CASH
+  TESLAPAY
+}
+
+model Ride {
+  id             Int           @id @default(autoincrement())
+  passengerId    Int
+  pickupZone     String
+  destZone       String
+  seats          Int
+  status         RideStatus    @default(REQUESTED)
+  fareSoloPaisa  Int
+  farePaisa      Int
+  paymentMethod  PaymentMethod
+  poolId         Int?
+
+  createdAt      TimestamptzString @default(now())
+  updatedAt      temporal.updatedAtString()
+
+  passenger      User          @relation(fields: [passengerId], references: [id])
+  events         RideEvent[]
+
+  @@index([passengerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model RideEvent {
+  id          Int      @id @default(autoincrement())
+  rideId      Int
+  fromStatus  RideStatus?
+  toStatus    RideStatus
+  actorId     Int?
+  note        String?
+
+  at          TimestamptzString @default(now())
+
+  ride        Ride     @relation(fields: [rideId], references: [id])
+
+  @@index([rideId])
 }
