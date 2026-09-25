@@ -1,24 +1,13 @@
 import * as authService from "../services/auth.service.js";
 import { signToken } from "../utils/auth.js";
+import { signUpValidator } from "../validators/auth.validator.js";
 
 async function signup(req, res) {
     console.log("request in sighnup")
   const { name, email, password, role = "PASSENGER" } = req.body;
   console.log("Signup request body:", req.body);
+signUpValidator(name, email, password, role);
 
-  if (
-    !name ||
-    !/^\S+@\S+$/.test(email || "") ||
-    (password || "").length < 8 ||
-    role !== "PASSENGER"
-  ) {
-    const error = new Error(
-      "name, valid email, 8+ char password required (passenger signup only)"
-    );
-
-    error.statusCode = 400;
-    throw error;
-  }
 
   const user = await authService.signup({
     name,
@@ -26,9 +15,11 @@ async function signup(req, res) {
     password,
     role,
   });
+  const token = signToken(user);
 
   res.status(201).json({
     success: true,
+    token,
     user: {
       id: user.id,
       name: user.name,
