@@ -1,6 +1,10 @@
 import {
-    acceptRide,
   getDriverRequests,
+  acceptRide,
+  getDriverPool,
+  arriveAtPool,
+  startPool,
+  completePool,
 } from "../services/driver.service.js";
 
 async function getRequests(req, res, next) {
@@ -10,6 +14,57 @@ async function getRequests(req, res, next) {
     res.json({
       success: true,
       rides,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function getPool(req, res, next) {
+  try {
+    const pool = await getDriverPool(req.user.id);
+
+    res.json({
+      success: true,
+      pool,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function arrivePool(req, res, next) {
+  try {
+    const result = await arriveAtPool(req.user.id);
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+async function startDriverPool(req, res, next) {
+  try {
+    const result = await startPool(req.user.id);
+
+    res.json({
+      success: true,
+      ...result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+async function completeDriverPool(req, res, next) {
+  try {
+    const result = await completePool(req.user.id);
+
+    res.json({
+      success: true,
+      ...result,
     });
   } catch (error) {
     next(error);
@@ -32,5 +87,9 @@ async function acceptDriverRide(req, res, next) {
 }
 export {
   getRequests,
-  acceptDriverRide
+  acceptDriverRide,
+  getPool,
+  arrivePool,
+  startDriverPool,
+  completeDriverPool,
 };
