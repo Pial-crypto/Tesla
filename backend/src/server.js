@@ -6,12 +6,13 @@ import errorMiddleware from "./middleware/error.middleware.js";
 import rideRoutes from "./routes/ride.routes.js";
 import cors from "cors";
 const app = express();
-app.use(
-  cors({
-    origin: "http://localhost:3000",
-    credentials: true,
-  })
-);
+cors({
+  origin: [
+    "http://localhost:3000",
+    "https://tesla-seven-mocha.vercel.app",
+  ],
+  credentials: true,
+})
 
 app.use(express.json());
 
