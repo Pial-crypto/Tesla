@@ -9,6 +9,7 @@ import {
   arrivePool,
   startDriverPool,
   completeDriverPool,
+  getHistory
 } from "../controllers/driver.controller.js";
 const router = Router();
 
@@ -42,4 +43,5 @@ router.post(
   authMiddleware("DRIVER"),
   completeDriverPool
 );
+router.get("/history", authMiddleware("DRIVER"), getHistory);
 export default router;

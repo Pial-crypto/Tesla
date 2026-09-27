@@ -436,6 +436,47 @@ async function completePool(driverId) {
     rides: activeRides.map((ride) => ride.id),
   };
 }
+
+async function getDriverHistory(driverId) {
+  const vehicle = await db.orm.public.Vehicle
+    .where({
+      driverId,
+    })
+    .first();
+
+  if (!vehicle) {
+    const error = new Error("no vehicle for this driver");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const pools = await db.orm.public.Pool
+    .where({
+      vehicleId: vehicle.id,
+    })
+    .all();
+
+  const completedPools = pools.filter(
+    (pool) => pool.status === "COMPLETED"
+  );
+
+  const history = [];
+
+  for (const pool of completedPools) {
+    const rides = await db.orm.public.Ride
+      .where({
+        poolId: pool.id,
+      })
+      .all();
+
+    history.push({
+      pool,
+      rides,
+    });
+  }
+
+  return history;
+}
 export {
   getDriverRequests,
   acceptRide,
@@ -443,5 +484,6 @@ export {
   arriveAtPool,
   startPool,
   completePool,
+  getDriverHistory
 };
 

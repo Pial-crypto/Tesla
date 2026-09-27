@@ -5,6 +5,7 @@ import {
   arriveAtPool,
   startPool,
   completePool,
+  getDriverHistory,
 } from "../services/driver.service.js";
 
 async function getRequests(req, res, next) {
@@ -70,6 +71,19 @@ async function completeDriverPool(req, res, next) {
     next(error);
   }
 }
+
+async function getHistory(req, res, next) {
+  try {
+    const history = await getDriverHistory(req.user.id);
+
+    res.json({
+      success: true,
+      history,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 async function acceptDriverRide(req, res, next) {
   try {
     const result = await acceptRide(
@@ -92,4 +106,5 @@ export {
   arrivePool,
   startDriverPool,
   completeDriverPool,
+  getHistory,
 };
