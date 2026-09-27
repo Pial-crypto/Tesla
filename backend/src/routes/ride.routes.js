@@ -6,6 +6,7 @@ import {
   createRideRequest,
   getMyRides,
   getFareEstimate,
+  cancelRideRequest,
 } from "../controllers/ride.controller.js";
 
 const router = Router();
@@ -29,5 +30,9 @@ router.get(
   authMiddleware("PASSENGER"),
   getFareEstimate
 );
-
+router.post(
+  "/:id/cancel",
+  authMiddleware("PASSENGER"),
+  cancelRideRequest
+);
 export default router;
