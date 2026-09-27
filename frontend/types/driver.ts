@@ -17,7 +17,7 @@ export interface DriverPool {
 
 export interface DriverRequestsResponse {
   success: boolean;
-  requests: Ride[];
+  rides: Ride[];
 }
 
 export interface DriverPoolData {

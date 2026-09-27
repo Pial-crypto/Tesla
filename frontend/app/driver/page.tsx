@@ -32,9 +32,11 @@ import type {
 } from "@/types/driver";
 import type { Ride } from "@/types/ride";
 import type { User } from "@/types/auth";
+import { useAuth } from "@/hook/auth";
 
 export default function DriverPage() {
   const router = useRouter();
+  useAuth()
 
   const [user, setUser] = useState<User | null>(null);
 

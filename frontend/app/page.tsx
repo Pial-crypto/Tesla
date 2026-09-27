@@ -80,9 +80,9 @@ authCheck()
               role: "PASSENGER",
             };
 
-      const data = await api(path, {
+      const data = await api<{ token: string; user: User }>(path, {
         method: "POST",
-        body
+        body,
       });
 
       setSession(data.token, data.user);

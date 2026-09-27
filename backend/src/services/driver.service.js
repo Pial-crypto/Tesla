@@ -1,10 +1,9 @@
-import { db } from "../prisma/db.ts";
+// import { db } from "../prisma/db.ts";
 import { calcFare } from "../utils/fare.js";
+import { db, pgPool } from "../prisma/db.ts";
 async function getDriverRequests(driverId) {
   const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
+    .where({ driverId })
     .first();
 
   if (!vehicle) {
@@ -30,185 +29,251 @@ async function getDriverRequests(driverId) {
   }
 
   return db.orm.public.Ride
-    .where({
-      status: "REQUESTED",
-    })
+    .where({ status: "REQUESTED" })
     .all();
 }
+
 async function acceptRide(driverId, rideId) {
-  const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
-    .first();
+  const client = await pgPool.connect();
 
-  if (!vehicle) {
-    const error = new Error("no vehicle for this driver");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  const ride = await db.orm.public.Ride
-    .where({
-      id: Number(rideId),
-    })
-    .first();
-
-  if (!ride) {
-    const error = new Error("ride not found");
-    error.statusCode = 404;
-    throw error;
-  }
-
-  if (ride.status !== "REQUESTED") {
-    const error = new Error("ride is no longer available");
-    error.statusCode = 409;
-    throw error;
-  }
-
-  let pool = await db.orm.public.Pool
-    .where({
-      vehicleId: vehicle.id,
-      status: "OPEN",
-    })
-    .first();
+  try {
+    await client.query("BEGIN");
 
 
-  if (pool && pool.pickupZone !== ride.pickupZone) {
-    const error = new Error(
-      `pool pickup is ${pool.pickupZone}; incompatible with ${ride.pickupZone}`
+    const vehicleResult = await client.query(
+      `
+        SELECT "id", "capacity"
+        FROM "Vehicle"
+        WHERE "driverId" = $1
+        FOR UPDATE
+      `,
+      [driverId]
     );
-    error.statusCode = 409;
-    throw error;
-  }
 
- 
-  if (!pool) {
-    pool = await db.orm.public.Pool.create({
-      vehicleId: vehicle.id,
-      pickupZone: ride.pickupZone,
-      status: "OPEN",
-    });
-  }
+    const vehicle = vehicleResult.rows[0];
 
+    if (!vehicle) {
+      const error = new Error("no vehicle for this driver");
+      error.statusCode = 404;
+      throw error;
+    }
 
-const poolRides = await db.orm.public.Ride
-  .where({
-    poolId: pool.id,
-  })
-  .all();
-
-const activePoolRides = poolRides.filter((poolRide) =>
-  ["MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(
-    poolRide.status
-  )
-);
-
-const seatsUsed = activePoolRides.reduce(
-  (total, poolRide) => total + poolRide.seats,
-  0
-);
-
-  if (seatsUsed + ride.seats > vehicle.capacity) {
-    const error = new Error(
-      `only ${vehicle.capacity - seatsUsed} seat(s) left`
+    const rideResult = await client.query(
+      `
+        SELECT *
+        FROM "Ride"
+        WHERE "id" = $1
+        FOR UPDATE
+      `,
+      [Number(rideId)]
     );
-    error.statusCode = 409;
-    throw error;
-  }
+
+    const ride = rideResult.rows[0];
+
+    if (!ride) {
+      const error = new Error("ride not found");
+      error.statusCode = 404;
+      throw error;
+    }
+
+    if (ride.status !== "REQUESTED") {
+      const error = new Error("ride is no longer available");
+      error.statusCode = 409;
+      throw error;
+    }
+
+    // Find an OPEN pool for this Tesla.
+    const poolResult = await client.query(
+      `
+        SELECT *
+        FROM "Pool"
+        WHERE "vehicleId" = $1
+          AND "status" = 'OPEN'
+        ORDER BY "id"
+        LIMIT 1
+        FOR UPDATE
+      `,
+      [vehicle.id]
+    );
+
+    let pool = poolResult.rows[0] ?? null;
+
+   
+    if (pool) {
+      const existingRidesResult = await client.query(
+        `
+          SELECT *
+          FROM "Ride"
+          WHERE "poolId" = $1
+        `,
+        [pool.id]
+      );
+
+      const existingPoolRides = existingRidesResult.rows;
+
+      const activeExistingRides = existingPoolRides.filter((poolRide) =>
+        ["MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(
+          poolRide.status
+        )
+      );
+
+      
+      if (activeExistingRides.length === 0) {
+        const updatedPoolResult = await client.query(
+          `
+            UPDATE "Pool"
+            SET "pickupZone" = $1,
+                "updatedAt" = NOW()
+            WHERE "id" = $2
+            RETURNING *
+          `,
+          [ride.pickupZone, pool.id]
+        );
+
+        pool = updatedPoolResult.rows[0];
+      } else if (pool.pickupZone !== ride.pickupZone) {
+        const error = new Error(
+          `pool pickup is ${pool.pickupZone}; incompatible with ${ride.pickupZone}`
+        );
+        error.statusCode = 409;
+        throw error;
+      }
+    }
+
+    if (!pool) {
+      const newPoolResult = await client.query(
+        `
+          INSERT INTO "Pool" (
+            "vehicleId",
+            "pickupZone",
+            "status",
+            "createdAt",
+            "updatedAt"
+          )
+          VALUES ($1, $2, 'OPEN', NOW(), NOW())
+          RETURNING *
+        `,
+        [vehicle.id, ride.pickupZone]
+      );
+
+      pool = newPoolResult.rows[0];
+    }
+
+   
+    const poolRidesResult = await client.query(
+      `
+        SELECT *
+        FROM "Ride"
+        WHERE "poolId" = $1
+        FOR UPDATE
+      `,
+      [pool.id]
+    );
+
+    const poolRides = poolRidesResult.rows;
+
+    const activePoolRides = poolRides.filter((poolRide) =>
+      ["MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(
+        poolRide.status
+      )
+    );
+
+    
+    const seatsUsed = activePoolRides.reduce(
+      (total, poolRide) => total + poolRide.seats,
+      0
+    );
+
+    if (seatsUsed + ride.seats > vehicle.capacity) {
+      const error = new Error(
+        `only ${vehicle.capacity - seatsUsed} seat(s) left`
+      );
+      error.statusCode = 409;
+      throw error;
+    }
+
+    const allPoolRides = [...activePoolRides, ride];
+
+    const isPooled = allPoolRides.length >= 2;
+
+    
+    for (const poolRide of allPoolRides) {
+      const fare = calcFare(
+        poolRide.pickupZone,
+        poolRide.destZone,
+        poolRide.seats,
+        isPooled
+      );
+
+      await client.query(
+        `
+          UPDATE "Ride"
+          SET "farePaisa" = $1,
+              "updatedAt" = NOW()
+          WHERE "id" = $2
+        `,
+        [fare.fare, poolRide.id]
+      );
+    }
+
   
-const allPoolRides = [
-  ...activePoolRides,
-  ride,
-];
+    const updatedRideResult = await client.query(
+      `
+        UPDATE "Ride"
+        SET "status" = 'MATCHED',
+            "poolId" = $1,
+            "updatedAt" = NOW()
+        WHERE "id" = $2
+          AND "status" = 'REQUESTED'
+        RETURNING *
+      `,
+      [pool.id, ride.id]
+    );
 
-const isPooled = allPoolRides.length >= 2;
+    const updatedRide = updatedRideResult.rows[0];
 
-for (const poolRide of allPoolRides) {
-  const fare = calcFare(
-    poolRide.pickupZone,
-    poolRide.destZone,
-    poolRide.seats,
-    isPooled
-  );
+    if (!updatedRide) {
+      const error = new Error("ride is no longer available");
+      error.statusCode = 409;
+      throw error;
+    }
 
-  await db.orm.public.Ride
-    .where({
-      id: poolRide.id,
-    })
-    .update({
-      farePaisa: fare.fare,
-    });
+  
+    await client.query(
+      `
+        INSERT INTO "RideEvent" (
+          "rideId",
+          "fromStatus",
+          "toStatus",
+          "actorId",
+          "note",
+          "at"
+        )
+        VALUES ($1, 'REQUESTED', 'MATCHED', $2, $3, NOW())
+      `,
+      [ride.id, driverId, `pool ${pool.id}`]
+    );
+
+    await client.query("COMMIT");
+
+    return {
+      poolId: pool.id,
+      rideId: updatedRide.id,
+      status: updatedRide.status,
+      seatsUsed: seatsUsed + ride.seats,
+      capacity: vehicle.capacity,
+    };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
-const updatedRide = await db.orm.public.Ride
-  .where({
-    id: ride.id,
-  })
-  .update({
-    status: "MATCHED",
-    poolId: pool.id,
-  });
 
-await db.orm.public.RideEvent.create({
-  rideId: ride.id,
-  fromStatus: "REQUESTED",
-  toStatus: "MATCHED",
-  actorId: driverId,
-  note: `pool ${pool.id}`,
-});
-
-return {
-  poolId: pool.id,
-  rideId: updatedRide.id,
-  status: updatedRide.status,
-  seatsUsed: seatsUsed + ride.seats,
-  capacity: vehicle.capacity,
-};
-}
 async function getDriverPool(driverId) {
   const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
-    .first();
-
-  if (!vehicle) {
-    const error = new Error("no vehicle for this driver");
-    error.statusCode = 404;
-    throw error;
-  }
-
-const pools = await db.orm.public.Pool
-  .where({
-    vehicleId: vehicle.id,
-  })
-  .all();
-
-const pool = pools.find((item) =>
-  ["OPEN", "DRIVER_ARRIVED", "STARTED"].includes(item.status)
-);
-
-  if (!pool) {
-    return null;
-  }
-
-  const rides = await db.orm.public.Ride
-    .where({
-      poolId: pool.id,
-    })
-    .all();
-
-  return {
-    pool,
-    rides,
-  };
-}
-
-async function arriveAtPool(driverId) {
-  const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
+    .where({ driverId })
     .first();
 
   if (!vehicle) {
@@ -218,9 +283,51 @@ async function arriveAtPool(driverId) {
   }
 
   const pools = await db.orm.public.Pool
-    .where({
-      vehicleId: vehicle.id,
-    })
+    .where({ vehicleId: vehicle.id })
+    .all();
+
+
+  for (const pool of pools) {
+    if (
+      !["OPEN", "DRIVER_ARRIVED", "STARTED"].includes(pool.status)
+    ) {
+      continue;
+    }
+
+    const rides = await db.orm.public.Ride
+      .where({ poolId: pool.id })
+      .all();
+
+    const activeRides = rides.filter((ride) =>
+      ["MATCHED", "DRIVER_ARRIVED", "STARTED"].includes(
+        ride.status
+      )
+    );
+
+    if (activeRides.length > 0) {
+      return {
+        pool,
+        rides,
+      };
+    }
+  }
+
+  return null;
+}
+
+async function arriveAtPool(driverId) {
+  const vehicle = await db.orm.public.Vehicle
+    .where({ driverId })
+    .first();
+
+  if (!vehicle) {
+    const error = new Error("no vehicle for this driver");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  const pools = await db.orm.public.Pool
+    .where({ vehicleId: vehicle.id })
     .all();
 
   const pool = pools.find((item) => item.status === "OPEN");
@@ -232,9 +339,7 @@ async function arriveAtPool(driverId) {
   }
 
   const rides = await db.orm.public.Ride
-    .where({
-      poolId: pool.id,
-    })
+    .where({ poolId: pool.id })
     .all();
 
   const activeRides = rides.filter((ride) =>
@@ -250,18 +355,14 @@ async function arriveAtPool(driverId) {
   }
 
   await db.orm.public.Pool
-    .where({
-      id: pool.id,
-    })
+    .where({ id: pool.id })
     .update({
       status: "DRIVER_ARRIVED",
     });
 
   for (const ride of activeRides) {
     await db.orm.public.Ride
-      .where({
-        id: ride.id,
-      })
+      .where({ id: ride.id })
       .update({
         status: "DRIVER_ARRIVED",
       });
@@ -281,11 +382,10 @@ async function arriveAtPool(driverId) {
     rides: activeRides.map((ride) => ride.id),
   };
 }
+
 async function startPool(driverId) {
   const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
+    .where({ driverId })
     .first();
 
   if (!vehicle) {
@@ -295,9 +395,7 @@ async function startPool(driverId) {
   }
 
   const pools = await db.orm.public.Pool
-    .where({
-      vehicleId: vehicle.id,
-    })
+    .where({ vehicleId: vehicle.id })
     .all();
 
   const pool = pools.find(
@@ -311,13 +409,11 @@ async function startPool(driverId) {
   }
 
   const rides = await db.orm.public.Ride
-    .where({
-      poolId: pool.id,
-    })
+    .where({ poolId: pool.id })
     .all();
 
-  const activeRides = rides.filter((ride) =>
-    ["DRIVER_ARRIVED"].includes(ride.status)
+  const activeRides = rides.filter(
+    (ride) => ride.status === "DRIVER_ARRIVED"
   );
 
   if (activeRides.length === 0) {
@@ -327,18 +423,14 @@ async function startPool(driverId) {
   }
 
   await db.orm.public.Pool
-    .where({
-      id: pool.id,
-    })
+    .where({ id: pool.id })
     .update({
       status: "STARTED",
     });
 
   for (const ride of activeRides) {
     await db.orm.public.Ride
-      .where({
-        id: ride.id,
-      })
+      .where({ id: ride.id })
       .update({
         status: "STARTED",
       });
@@ -361,9 +453,7 @@ async function startPool(driverId) {
 
 async function completePool(driverId) {
   const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
+    .where({ driverId })
     .first();
 
   if (!vehicle) {
@@ -373,9 +463,7 @@ async function completePool(driverId) {
   }
 
   const pools = await db.orm.public.Pool
-    .where({
-      vehicleId: vehicle.id,
-    })
+    .where({ vehicleId: vehicle.id })
     .all();
 
   const pool = pools.find(
@@ -389,9 +477,7 @@ async function completePool(driverId) {
   }
 
   const rides = await db.orm.public.Ride
-    .where({
-      poolId: pool.id,
-    })
+    .where({ poolId: pool.id })
     .all();
 
   const activeRides = rides.filter(
@@ -405,18 +491,14 @@ async function completePool(driverId) {
   }
 
   await db.orm.public.Pool
-    .where({
-      id: pool.id,
-    })
+    .where({ id: pool.id })
     .update({
       status: "COMPLETED",
     });
 
   for (const ride of activeRides) {
     await db.orm.public.Ride
-      .where({
-        id: ride.id,
-      })
+      .where({ id: ride.id })
       .update({
         status: "COMPLETED",
       });
@@ -439,9 +521,7 @@ async function completePool(driverId) {
 
 async function getDriverHistory(driverId) {
   const vehicle = await db.orm.public.Vehicle
-    .where({
-      driverId,
-    })
+    .where({ driverId })
     .first();
 
   if (!vehicle) {
@@ -451,9 +531,7 @@ async function getDriverHistory(driverId) {
   }
 
   const pools = await db.orm.public.Pool
-    .where({
-      vehicleId: vehicle.id,
-    })
+    .where({ vehicleId: vehicle.id })
     .all();
 
   const completedPools = pools.filter(
@@ -464,9 +542,7 @@ async function getDriverHistory(driverId) {
 
   for (const pool of completedPools) {
     const rides = await db.orm.public.Ride
-      .where({
-        poolId: pool.id,
-      })
+      .where({ poolId: pool.id })
       .all();
 
     history.push({
@@ -477,6 +553,7 @@ async function getDriverHistory(driverId) {
 
   return history;
 }
+
 export {
   getDriverRequests,
   acceptRide,
@@ -484,6 +561,5 @@ export {
   arriveAtPool,
   startPool,
   completePool,
-  getDriverHistory
+  getDriverHistory,
 };
-

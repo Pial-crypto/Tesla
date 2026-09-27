@@ -26,7 +26,10 @@ export type RideStatus =
   | "CANCELLED";
 
 export type PaymentMethod = "CASH" | "TESLAPAY";
-
+   export interface rideResponse{
+      success:boolean,
+      rides:Ride[]
+     }
 export interface Ride {
   id: number;
   pickupZone: string;
