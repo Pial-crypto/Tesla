@@ -1,6 +1,12 @@
 import { paisa } from "@/lib/api";
 import { statusLabel } from "@/lib/ride";
-import type { Ride, RideHistoryEvent, RideStatus } from "@/types/ride";
+
+import type {
+  Ride,
+  RideHistoryEvent,
+  RideStatus,
+} from "@/types/ride";
+
 import { StatusBadge } from "./StatusBadge";
 
 interface RideHistoryProps {
@@ -19,6 +25,7 @@ export function RideHistory({
       <div className="flex items-center justify-between border-b border-white/5 px-5 py-5 sm:px-7">
         <div>
           <h2 className="font-bold">Ride history</h2>
+
           <p className="mt-1 text-xs text-slate-500">
             Your completed and cancelled rides.
           </p>
@@ -61,7 +68,9 @@ export function RideHistory({
 
                   <p className="mt-1 text-xs text-slate-600">
                     {ride.seats} seat{ride.seats > 1 ? "s" : ""}
-                    {ride.poolId ? " · pooled" : " · solo"}
+                    {ride.poolId
+                      ? " · pooled"
+                      : " · solo"}
                   </p>
                 </div>
 
@@ -71,7 +80,9 @@ export function RideHistory({
                   </span>
 
                   <button
-                    onClick={() => onToggleHistory(String(ride.id))}
+                    onClick={() =>
+                      onToggleHistory(ride.id.toString())
+                    }
                     type="button"
                     className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-semibold text-slate-400 transition hover:border-slate-600 hover:text-white"
                   >
@@ -89,36 +100,44 @@ export function RideHistory({
                   </p>
 
                   <div className="space-y-3">
-                    {history[String(ride.id)]?.map((event, index) => (
-                      <div
-                        key={`${ride.id}-${index}`}
-                        className="flex gap-3 text-xs"
-                      >
-                        <div className="flex flex-col items-center">
-                          <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-cyan-400" />
+                    {history[String(ride.id)]?.map(
+                      (event, index) => (
+                        <div
+                          key={`${ride.id}-${index}`}
+                          className="flex gap-3 text-xs"
+                        >
+                          <div className="flex flex-col items-center">
+                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-cyan-400" />
 
-                          {index <
-                            (history[String(ride.id)]?.length ?? 0) - 1 && (
-                            <span className="mt-1 h-full w-px bg-slate-800" />
-                          )}
+                            {index <
+                              (history[String(ride.id)]?.length ??
+                                0) -
+                                1 && (
+                              <span className="mt-1 h-full w-px bg-slate-800" />
+                            )}
+                          </div>
+
+                          <div className="pb-2">
+                            <p className="font-medium text-slate-300">
+                              {statusLabel(
+                                event.toStatus as RideStatus,
+                              )}
+                            </p>
+
+                            <p className="mt-0.5 text-slate-600">
+                              {event.fromStatus
+                                ? `${statusLabel(
+                                    event.fromStatus as RideStatus,
+                                  )} → `
+                                : ""}
+                              {new Date(
+                                event.at,
+                              ).toLocaleString()}
+                            </p>
+                          </div>
                         </div>
-
-                        <div className="pb-2">
-                          <p className="font-medium text-slate-300">
-                            {statusLabel(event.toStatus as RideStatus)}
-                          </p>
-
-                          <p className="mt-0.5 text-slate-600">
-                            {event.fromStatus
-                              ? `${statusLabel(
-                                  event.fromStatus as RideStatus
-                                )} → `
-                              : ""}
-                            {new Date(event.at).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                      ),
+                    )}
                   </div>
                 </div>
               )}

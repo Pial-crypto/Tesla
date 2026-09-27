@@ -1,15 +1,19 @@
 ﻿import { paisa } from "@/lib/api";
 import { statusLabel } from "@/lib/ride";
+
 import type { Ride } from "@/types/ride";
+
 import { Lifecycle } from "./LifeCycle";
+
+interface ActiveRideProps {
+  active: Ride;
+  cancelRide: (id: string) => Promise<void> | void;
+}
 
 export function ActiveRide({
   active,
   cancelRide,
-}: {
-  active: Ride;
-  cancelRide: (id: string) => Promise<void> | void;
-}) {
+}: ActiveRideProps) {
   return (
     <section className="overflow-hidden rounded-3xl border border-cyan-400/15 bg-slate-900/70 shadow-2xl shadow-black/20">
       <div className="border-b border-white/5 bg-gradient-to-r from-cyan-400/[0.08] to-transparent px-5 py-5 sm:px-7">
@@ -31,7 +35,9 @@ export function ActiveRide({
 
             <p className="mt-1 text-sm text-slate-500">
               {active.seats} seat{active.seats > 1 ? "s" : ""}
-              {active.poolId ? " · Shared pool" : " · Private ride"}
+              {active.poolId
+                ? " · Shared pool"
+                : " · Private ride"}
             </p>
           </div>
 
@@ -64,7 +70,9 @@ export function ActiveRide({
           {(active.status === "REQUESTED" ||
             active.status === "MATCHED") && (
             <button
-              onClick={() => cancelRide(active.id.toString())}
+              onClick={() =>
+                cancelRide(active.id.toString())
+              }
               type="button"
               className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2.5 text-xs font-bold text-red-300 transition hover:bg-red-400/15"
             >

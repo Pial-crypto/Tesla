@@ -32,11 +32,14 @@ export interface Ride {
   pickupZone: string;
   destZone: string;
   seats: number;
-  poolId: number | null;
-  farePaisa: number;
   status: RideStatus;
-}
+  poolId: number | null;
 
+  fareSoloPaisa: number;
+  farePaisa: number;
+
+  paymentMethod: PaymentMethod;
+}
 export interface FareEstimate {
   solo: number;
   ifPooled: number;
