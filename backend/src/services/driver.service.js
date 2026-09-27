@@ -2,15 +2,23 @@
 import { calcFare } from "../utils/fare.js";
 import { db, pgPool } from "../prisma/db.ts";
 async function getDriverRequests(driverId) {
+  console.log("finding with id", driverId);
+
   const vehicle = await db.orm.public.Vehicle
     .where({ driverId })
     .first();
+
+  console.log(vehicle);
 
   if (!vehicle) {
     const error = new Error("no vehicle for this driver");
     error.statusCode = 404;
     throw error;
   }
+  console.log("All rides",await db.orm.public.Ride.where({
+      // vehicleId: vehicle.id,
+      status: "REQUESTED",
+    }).all())
 
   const activePool = await db.orm.public.Pool
     .where({
@@ -20,17 +28,27 @@ async function getDriverRequests(driverId) {
     .first();
 
   if (activePool) {
-    return db.orm.public.Ride
+    console.log("active pool");
+
+    const ride = await db.orm.public.Ride
       .where({
         status: "REQUESTED",
         pickupZone: activePool.pickupZone,
       })
       .all();
+
+    console.log("rides", ride);
+
+    return ride;
   }
 
-  return db.orm.public.Ride
-    .where({ status: "REQUESTED" })
-    .all();
+  const rides = await db.orm.public.Ride.all();
+
+  console.log("ALL RIDES:", rides);
+
+  return rides.filter(
+    (ride) => ride.status === "REQUESTED"
+  );
 }
 
 async function acceptRide(driverId, rideId) {

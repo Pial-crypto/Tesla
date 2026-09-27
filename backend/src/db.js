@@ -21,7 +21,7 @@ async function migrateAndSeed() {
  
   const passwordHash = await bcrypt.hash("password123", 10);
 
-  // Create Jashim
+
   const jashim = await db.orm.public.User.create({
     data: {
       name: "Jashim",
@@ -59,7 +59,7 @@ async function migrateAndSeed() {
     },
   });
 
-  // Create Bullet Tesla
+
   await db.orm.public.Vehicle.create({
     data: {
       name: "Bullet",

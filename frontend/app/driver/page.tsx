@@ -64,7 +64,8 @@ setRequests(data.rides ?? []);
 
   const loadPool = useCallback(async () => {
     const data = await getDriverPool();
-    console.log("pool data",pool)
+    console.log(data,"Pool data")
+    
     setPool(data.pool);
   }, []);
 

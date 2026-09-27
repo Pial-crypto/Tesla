@@ -1,4 +1,5 @@
 services:
+
   postgres:
     image: postgres:17-alpine
     container_name: tesla-postgres
@@ -16,6 +17,32 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #   container_name: tesla-backend
+  #   restart: unless-stopped
+  #   environment:
+  #     DATABASE_URL: postgresql://tesla:tesla_dev_password@postgres:5432/tesla_pool
+  #     JWT_SECRET: change-this-to-a-long-random-secret
+  #   ports:
+  #     - "5000:5000"
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: tesla-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "3000:3000"
+  #   depends_on:
+  #     - backend
 
 volumes:
   postgres_data:
