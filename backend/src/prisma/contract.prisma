@@ -16,6 +16,7 @@ model User {
   updatedAt    temporal.updatedAtString()
 
   rides        Ride[]
+  vehicle      Vehicle?
 }
 
 model Vehicle {
@@ -25,9 +26,8 @@ model Vehicle {
   capacity Int
 
   driver   User   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  pools    Pool[]
 }
-
-
 
 enum RideStatus {
   REQUESTED
@@ -59,11 +59,13 @@ model Ride {
   updatedAt      temporal.updatedAtString()
 
   passenger      User          @relation(fields: [passengerId], references: [id])
+  pool           Pool?         @relation(fields: [poolId], references: [id])
   events         RideEvent[]
 
   @@index([passengerId])
   @@index([status])
   @@index([createdAt])
+  @@index([poolId])
 }
 
 model RideEvent {
@@ -79,4 +81,27 @@ model RideEvent {
   ride        Ride     @relation(fields: [rideId], references: [id])
 
   @@index([rideId])
+}
+
+enum PoolStatus {
+  OPEN
+  DRIVER_ARRIVED
+  STARTED
+  COMPLETED
+}
+
+model Pool {
+  id         Int        @id @default(autoincrement())
+  vehicleId  Int
+  pickupZone String
+  status     PoolStatus @default(OPEN)
+
+  vehicle    Vehicle    @relation(fields: [vehicleId], references: [id])
+  rides      Ride[]
+
+  createdAt  TimestamptzString @default(now())
+  updatedAt  temporal.updatedAtString()
+
+  @@index([vehicleId])
+  @@index([status])
 }

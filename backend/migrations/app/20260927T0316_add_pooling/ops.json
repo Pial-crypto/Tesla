@@ -1,0 +1,242 @@
+[
+  {
+    "id": "table.Pool",
+    "label": "Create table \"Pool\"",
+    "summary": "Creates table \"Pool\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Pool"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Pool\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Pool\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Pool\"",
+        "sql": "CREATE TABLE \"public\".\"Pool\" (\n  \"createdAt\" timestamptz DEFAULT (now()) NOT NULL,\n  \"id\" SERIAL NOT NULL,\n  \"pickupZone\" text NOT NULL,\n  \"status\" text DEFAULT 'OPEN' NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"vehicleId\" int4 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Pool_status_check_34662d3c\" CHECK (\"status\" IN ('OPEN', 'DRIVER_ARRIVED', 'STARTED', 'COMPLETED'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Pool\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Pool\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Pool.Pool_status_idx_e98638ab",
+    "label": "Create index \"Pool_status_idx_e98638ab\" on \"Pool\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Pool_status_idx_e98638ab",
+        "table": "Pool"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Pool_status_idx_e98638ab\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Pool_status_idx_e98638ab\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Pool_status_idx_e98638ab\"",
+        "sql": "CREATE INDEX \"Pool_status_idx_e98638ab\" ON \"public\".\"Pool\" (\"status\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Pool_status_idx_e98638ab\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Pool_status_idx_e98638ab\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Pool.Pool_vehicleId_idx_e2df58fc",
+    "label": "Create index \"Pool_vehicleId_idx_e2df58fc\" on \"Pool\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Pool_vehicleId_idx_e2df58fc",
+        "table": "Pool"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Pool_vehicleId_idx_e2df58fc\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Pool_vehicleId_idx_e2df58fc\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Pool_vehicleId_idx_e2df58fc\"",
+        "sql": "CREATE INDEX \"Pool_vehicleId_idx_e2df58fc\" ON \"public\".\"Pool\" (\"vehicleId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Pool_vehicleId_idx_e2df58fc\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Pool_vehicleId_idx_e2df58fc\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Ride.Ride_poolId_idx_d8a048f6",
+    "label": "Create index \"Ride_poolId_idx_d8a048f6\" on \"Ride\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Ride_poolId_idx_d8a048f6",
+        "table": "Ride"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Ride_poolId_idx_d8a048f6\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Ride_poolId_idx_d8a048f6\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Ride_poolId_idx_d8a048f6\"",
+        "sql": "CREATE INDEX \"Ride_poolId_idx_d8a048f6\" ON \"public\".\"Ride\" (\"poolId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Ride_poolId_idx_d8a048f6\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Ride_poolId_idx_d8a048f6\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Pool.Pool_vehicleId_fkey",
+    "label": "Add foreign key \"Pool_vehicleId_fkey\" on \"Pool\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Pool_vehicleId_fkey",
+        "table": "Pool"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Pool_vehicleId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Pool_vehicleId_fkey",
+          "public",
+          "\"public\".\"Pool\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Pool_vehicleId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Pool\"\nADD CONSTRAINT \"Pool_vehicleId_fkey\"\nFOREIGN KEY (\"vehicleId\")\nREFERENCES \"public\".\"Vehicle\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Pool_vehicleId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Pool_vehicleId_fkey",
+          "public",
+          "\"public\".\"Pool\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Ride.Ride_poolId_fkey",
+    "label": "Add foreign key \"Ride_poolId_fkey\" on \"Ride\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Ride_poolId_fkey",
+        "table": "Ride"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Ride_poolId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Ride_poolId_fkey",
+          "public",
+          "\"public\".\"Ride\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Ride_poolId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Ride\"\nADD CONSTRAINT \"Ride_poolId_fkey\"\nFOREIGN KEY (\"poolId\")\nREFERENCES \"public\".\"Pool\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Ride_poolId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Ride_poolId_fkey",
+          "public",
+          "\"public\".\"Ride\""
+        ]
+      }
+    ]
+  }
+]

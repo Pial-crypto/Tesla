@@ -4,6 +4,10 @@
   "target": "postgres",
   "profileHash": "3916f444a8a17ad749191acf9e08dad97d1a327b88c2f1d45d12f240296aa8b2",
   "roots": {
+    "Pool": {
+      "model": "Pool",
+      "namespace": "public"
+    },
     "Ride": {
       "model": "Ride",
       "namespace": "public"
@@ -35,6 +39,27 @@
               {
                 "name": "TESLAPAY",
                 "value": "TESLAPAY"
+              }
+            ]
+          },
+          "PoolStatus": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "OPEN",
+                "value": "OPEN"
+              },
+              {
+                "name": "DRIVER_ARRIVED",
+                "value": "DRIVER_ARRIVED"
+              },
+              {
+                "name": "STARTED",
+                "value": "STARTED"
+              },
+              {
+                "name": "COMPLETED",
+                "value": "COMPLETED"
               }
             ]
           },
@@ -82,6 +107,115 @@
           }
         },
         "models": {
+          "Pool": {
+            "fields": {
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "pickupZone": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "status": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "PoolStatus",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "updatedAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "kind": "scalar"
+                }
+              },
+              "vehicleId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "rides": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "poolId"
+                  ]
+                },
+                "to": {
+                  "model": "Ride",
+                  "namespace": "public"
+                }
+              },
+              "vehicle": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "vehicleId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Vehicle",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "pickupZone": {
+                  "column": "pickupZone"
+                },
+                "status": {
+                  "column": "status"
+                },
+                "updatedAt": {
+                  "column": "updatedAt"
+                },
+                "vehicleId": {
+                  "column": "vehicleId"
+                }
+              },
+              "namespaceId": "public",
+              "table": "Pool"
+            }
+          },
           "Ride": {
             "fields": {
               "createdAt": {
@@ -210,6 +344,22 @@
                 },
                 "to": {
                   "model": "User",
+                  "namespace": "public"
+                }
+              },
+              "pool": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "poolId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Pool",
                   "namespace": "public"
                 }
               }
@@ -440,6 +590,22 @@
                   "model": "Ride",
                   "namespace": "public"
                 }
+              },
+              "vehicle": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "driverId"
+                  ]
+                },
+                "to": {
+                  "model": "Vehicle",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
@@ -517,6 +683,21 @@
                   "model": "User",
                   "namespace": "public"
                 }
+              },
+              "pools": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "vehicleId"
+                  ]
+                },
+                "to": {
+                  "model": "Pool",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
@@ -547,6 +728,107 @@
       "public": {
         "entries": {
           "table": {
+            "Pool": {
+              "checks": [
+                {
+                  "expression": "\"status\" IN ('OPEN', 'DRIVER_ARRIVED', 'STARTED', 'COMPLETED')",
+                  "name": "Pool_status_check_34662d3c",
+                  "prefix": "Pool_status_check"
+                }
+              ],
+              "columns": {
+                "createdAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "expression": "autoincrement()",
+                    "kind": "function"
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "pickupZone": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "status": {
+                  "codecId": "pg/text@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": "OPEN"
+                  },
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "PoolStatus",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "updatedAt": {
+                  "codecId": "pg/timestamptz-string@1",
+                  "nativeType": "timestamptz",
+                  "nullable": false
+                },
+                "vehicleId": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "vehicleId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Pool"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Vehicle"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "status"
+                  ],
+                  "name": "Pool_status_idx_e98638ab",
+                  "prefix": "Pool_status_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "vehicleId"
+                  ],
+                  "name": "Pool_vehicleId_idx_e2df58fc",
+                  "prefix": "Pool_vehicleId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": []
+            },
             "Ride": {
               "checks": [
                 {
@@ -662,6 +944,22 @@
                     "namespaceId": "public",
                     "tableName": "User"
                   }
+                },
+                {
+                  "source": {
+                    "columns": [
+                      "poolId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Ride"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Pool"
+                  }
                 }
               ],
               "indexes": [
@@ -679,6 +977,14 @@
                   ],
                   "name": "Ride_passengerId_idx_21958ace",
                   "prefix": "Ride_passengerId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "poolId"
+                  ],
+                  "name": "Ride_poolId_idx_d8a048f6",
+                  "prefix": "Ride_poolId_idx",
                   "unique": false
                 },
                 {
@@ -945,6 +1251,15 @@
                 "TESLAPAY"
               ]
             },
+            "PoolStatus": {
+              "kind": "valueSet",
+              "values": [
+                "OPEN",
+                "DRIVER_ARRIVED",
+                "STARTED",
+                "COMPLETED"
+              ]
+            },
             "RideStatus": {
               "kind": "valueSet",
               "values": [
@@ -969,12 +1284,27 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "6b0ae6a4db04ec2305feea8b4f72c9e83a08816bdc5d3bc2490e81e20805fd51"
+    "storageHash": "04ff1b6a15a62fc7f8d6cc2c5abaa56c7f62cf265fc09cda56fa8cfe5784c631"
   },
   "execution": {
-    "executionHash": "8da418595871e2e6bd859c95388a84d0c6b4d0b304f382bb52b1220ee380a071",
+    "executionHash": "536cba691570bdb75db7226d50e06bedd00c0ce461e4722d5c735afbf8a00746",
     "mutations": {
       "defaults": [
+        {
+          "onCreate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "onUpdate": {
+            "id": "timestampNow",
+            "kind": "generator"
+          },
+          "ref": {
+            "column": "updatedAt",
+            "namespace": "public",
+            "table": "Pool"
+          }
+        },
         {
           "onCreate": {
             "id": "timestampNow",
