@@ -20,7 +20,9 @@ import type {
   PaymentMethod,
   Ride,
   RideHistoryEvent,
+  rideResponse,
 } from "@/types/ride";
+import { useAuth } from "@/hook/auth";
 
 export default function PassengerPage() {
   const router = useRouter();
@@ -37,6 +39,7 @@ export default function PassengerPage() {
   >({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  useAuth()
 
   useEffect(() => {
     setUser(getUser());
@@ -44,7 +47,9 @@ export default function PassengerPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api<Ride[]>("/rides");
+  
+      const data = await api<rideResponse>("/rides");
+      console.log(data)
       setRides(data.rides);
       setError("");
     } catch (loadError: unknown) {
@@ -195,14 +200,14 @@ export default function PassengerPage() {
     }
 
     try {
-      const timeline = await api<RideHistoryEvent[]>(
-        `/rides/${id}/history`,
-      );
+   const data = await api<{ history: RideHistoryEvent[] }>(
+  `/rides/${id}/history`,
+);
 
-      setHistory((current) => ({
-        ...current,
-        [id]: timeline,
-      }));
+setHistory((current) => ({
+  ...current,
+  [id]: data.history,
+}));
     } catch (toggleError: unknown) {
       setError(getErrorMessage(toggleError));
     }

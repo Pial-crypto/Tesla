@@ -26,17 +26,23 @@ export type RideStatus =
   | "CANCELLED";
 
 export type PaymentMethod = "CASH" | "TESLAPAY";
-
+   export interface rideResponse{
+      success:boolean,
+      rides:Ride[]
+     }
 export interface Ride {
   id: number;
   pickupZone: string;
   destZone: string;
   seats: number;
-  poolId: number | null;
-  farePaisa: number;
   status: RideStatus;
-}
+  poolId: number | null;
 
+  fareSoloPaisa: number;
+  farePaisa: number;
+
+  paymentMethod: PaymentMethod;
+}
 export interface FareEstimate {
   solo: number;
   ifPooled: number;

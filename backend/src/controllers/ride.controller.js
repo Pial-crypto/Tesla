@@ -2,6 +2,8 @@ import {
   createRide,
   getPassengerRides,
   estimateFare,
+  cancelRide,
+  getRideHistory,
 } from "../services/ride.service.js";
 
 async function createRideRequest(req, res, next) {
@@ -49,8 +51,42 @@ async function getFareEstimate(req, res, next) {
   }
 }
 
+async function cancelRideRequest(req, res, next) {
+  try {
+    const ride = await cancelRide(
+      req.user.id,
+      Number(req.params.id)
+    );
+
+    res.json({
+      success: true,
+      ride,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
+
+async function getRideHistoryRequest(req, res, next) {
+  try {
+    const history = await getRideHistory(
+      req.user.id,
+      Number(req.params.id)
+    );
+
+    res.json({
+      success: true,
+      history,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
 export {
   createRideRequest,
   getMyRides,
   getFareEstimate,
+  cancelRideRequest,
+  getRideHistoryRequest
 };
