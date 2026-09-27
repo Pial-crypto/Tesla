@@ -1,7 +1,9 @@
 import express from "express";
 import { migrateAndSeed } from "./db.js";
+import driverRoutes from "./routes/driver.routes.js";
 import authRoutes from "./routes/auth.routes.js";
 import errorMiddleware from "./middleware/error.middleware.js";
+import rideRoutes from "./routes/ride.routes.js";
 import cors from "cors";
 const app = express();
 app.use(
@@ -15,7 +17,8 @@ app.use(express.json());
 
 app.use("/api/auth", authRoutes);
 app.use(errorMiddleware);
-
+app.use("/api/rides", rideRoutes);
+app.use("/api/driver", driverRoutes);
 app.get("/api/health", (req, res) => {
   res.json({
     success: true,
