@@ -53,6 +53,7 @@ export default function PassengerPage() {
   }, []);
 
   useEffect(() => {
+  
     if (user === undefined) {
       return;
     }
@@ -63,6 +64,7 @@ export default function PassengerPage() {
     }
 
     if (user.role !== "PASSENGER") {
+      console.log(user)
       router.replace("/driver");
       return;
     }

@@ -28,23 +28,22 @@ export type RideStatus =
 export type PaymentMethod = "CASH" | "TESLAPAY";
 
 export interface Ride {
-  id: string;
-  pickup_zone: string;
-  dest_zone: string;
+  id: number;
+  pickupZone: string;
+  destZone: string;
   seats: number;
-  pool_id?: string | null;
-  fare_paisa: number;
+  poolId: number | null;
+  farePaisa: number;
   status: RideStatus;
 }
 
-export  interface FareEstimate {
+export interface FareEstimate {
   solo: number;
   ifPooled: number;
 }
 
 export interface RideHistoryEvent {
-  from_status?: string | null;
-  to_status: string;
+  fromStatus?: string | null;
+  toStatus: string;
   at: string;
 }
-

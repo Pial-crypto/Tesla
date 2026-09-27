@@ -3,7 +3,7 @@ import { verifyToken } from "../utils/auth.js";
 function authMiddleware(role) {
   return (req, res, next) => {
     const authorization = req.headers.authorization;
-
+console.log("authorization", authorization)
     if (!authorization?.startsWith("Bearer ")) {
       const error = new Error("sign in required");
       error.statusCode = 401;

@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api, setSession, getUser } from "../lib/api";
+import { api, setSession, getUser, clearSession } from "../lib/api";
 import { MobileLogo } from "@/components/auth/MobileLogo";
 import { Form } from "@/components/auth/Form";
 import { BrandSection } from "@/components/auth/BrandSection";
-import { SignupData,LoginData } from "@/types/auth";
+import { SignupData,LoginData, User } from "@/types/auth";
 
 
 export default function Home() {
@@ -23,12 +23,28 @@ export default function Home() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const user = getUser();
 
-    if (user) {
-      router.replace(user.role === "DRIVER" ? "/driver" : "/passenger");
-    }
+    useEffect(() => {
+    const user = getUser();
+    
+async function authCheck() {
+  console.log(user)
+  try{
+const data = await api<{ user: User }>("/auth/me");
+  // console.log(data)
+  if(data.user){
+    
+     router.replace(user!.role === "DRIVER" ? "/driver" : "/passenger");
+  }
+  }catch(error){
+clearSession();
+  }
+  
+
+}
+
+authCheck()
+    
   }, [router]);
 
   function updateField(

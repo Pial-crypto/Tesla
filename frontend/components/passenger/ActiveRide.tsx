@@ -34,7 +34,7 @@ export function ActiveRide({
 
           <div className="text-left sm:text-right">
             <p className="text-[11px] uppercase tracking-wider text-slate-500">Current fare</p>
-            <p className="mt-1 text-2xl font-bold text-cyan-300">{paisa(active.fare_paisa)}</p>
+            <p className="mt-1 text-2xl font-bold text-cyan-300">{paisa(active.farePaisa)}</p>
           </div>
         </div>
       </div>
