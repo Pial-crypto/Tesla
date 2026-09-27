@@ -17,24 +17,32 @@ export function ActiveRide({
           <div>
             <div className="mb-2 flex items-center gap-2">
               <span className="h-2 w-2 animate-pulse rounded-full bg-cyan-400" />
+
               <span className="text-xs font-bold uppercase tracking-widest text-cyan-300">
                 Active ride
               </span>
             </div>
 
             <h2 className="text-xl font-bold">
-              {active.pickup_zone} <span className="text-slate-600">→</span> {active.dest_zone}
+              {active.pickupZone}
+              <span className="text-slate-600"> → </span>
+              {active.destZone}
             </h2>
 
             <p className="mt-1 text-sm text-slate-500">
               {active.seats} seat{active.seats > 1 ? "s" : ""}
-              {active.pool_id ? " · Shared pool" : " · Private ride"}
+              {active.poolId ? " · Shared pool" : " · Private ride"}
             </p>
           </div>
 
           <div className="text-left sm:text-right">
-            <p className="text-[11px] uppercase tracking-wider text-slate-500">Current fare</p>
-            <p className="mt-1 text-2xl font-bold text-cyan-300">{paisa(active.farePaisa)}</p>
+            <p className="text-[11px] uppercase tracking-wider text-slate-500">
+              Current fare
+            </p>
+
+            <p className="mt-1 text-2xl font-bold text-cyan-300">
+              {paisa(active.farePaisa)}
+            </p>
           </div>
         </div>
       </div>
@@ -44,15 +52,19 @@ export function ActiveRide({
 
         <div className="flex flex-col justify-between gap-4 rounded-2xl border border-white/5 bg-slate-950/50 p-4 sm:flex-row sm:items-center">
           <div>
-            <p className="text-sm font-semibold">{statusLabel(active.status)}</p>
+            <p className="text-sm font-semibold">
+              {statusLabel(active.status)}
+            </p>
+
             <p className="mt-1 text-xs text-slate-500">
               Your ride status updates automatically.
             </p>
           </div>
 
-          {(active.status === "REQUESTED" || active.status === "MATCHED") && (
+          {(active.status === "REQUESTED" ||
+            active.status === "MATCHED") && (
             <button
-              onClick={() => cancelRide(active.id)}
+              onClick={() => cancelRide(active.id.toString())}
               type="button"
               className="rounded-xl border border-red-400/20 bg-red-400/10 px-4 py-2.5 text-xs font-bold text-red-300 transition hover:bg-red-400/15"
             >

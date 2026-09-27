@@ -150,9 +150,33 @@ async function cancelRide(passengerId, rideId) {
 
   return updatedRide;
 }
+async function getRideHistory(passengerId, rideId) {
+  const ride = await db.orm.public.Ride
+    .where({ id: rideId })
+    .first();
+
+  if (!ride) {
+    const error = new Error("Ride not found");
+    error.statusCode = 404;
+    throw error;
+  }
+
+  if (ride.passengerId !== passengerId) {
+    const error = new Error("You can only view your own ride history");
+    error.statusCode = 403;
+    throw error;
+  }
+
+  const events = await db.orm.public.RideEvent
+    .where({ rideId: ride.id })
+    .all();
+
+  return events;
+}
 export {
   createRide,
   getPassengerRides,
   estimateFare,
   cancelRide,
+  getRideHistory,
 };

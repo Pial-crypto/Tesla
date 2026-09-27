@@ -195,14 +195,14 @@ export default function PassengerPage() {
     }
 
     try {
-      const timeline = await api<RideHistoryEvent[]>(
-        `/rides/${id}/history`,
-      );
+   const data = await api<{ history: RideHistoryEvent[] }>(
+  `/rides/${id}/history`,
+);
 
-      setHistory((current) => ({
-        ...current,
-        [id]: timeline,
-      }));
+setHistory((current) => ({
+  ...current,
+  [id]: data.history,
+}));
     } catch (toggleError: unknown) {
       setError(getErrorMessage(toggleError));
     }
