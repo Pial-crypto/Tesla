@@ -1,18 +1,17 @@
 // use prisma-8
-
 enum UserRole {
   DRIVER
   PASSENGER
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
+  id           Int                        @id @default(autoincrement())
   name         String
-  email        String   @unique
+  email        String                     @unique
   passwordHash String
   role         UserRole
 
-  createdAt    TimestamptzString @default(now())
+  createdAt    TimestamptzString          @default(now())
   updatedAt    temporal.updatedAtString()
 
   rides        Ride[]
@@ -20,12 +19,13 @@ model User {
 }
 
 model Vehicle {
-  id       Int    @id @default(autoincrement())
+  id       Int     @id @default(autoincrement())
   name     String
-  driverId Int    @unique
+  driverId Int     @unique
   capacity Int
+ 
 
-  driver   User   @relation(fields: [driverId], references: [id], onDelete: Cascade)
+  driver   User    @relation(fields:[driverId], references:[id], onDelete: Cascade)
   pools    Pool[]
 }
 
@@ -44,23 +44,23 @@ enum PaymentMethod {
 }
 
 model Ride {
-  id             Int           @id @default(autoincrement())
-  passengerId    Int
-  pickupZone     String
-  destZone       String
-  seats          Int
-  status         RideStatus    @default(REQUESTED)
-  fareSoloPaisa  Int
-  farePaisa      Int
-  paymentMethod  PaymentMethod
-  poolId         Int?
+  id            Int                        @id @default(autoincrement())
+  passengerId   Int
+  pickupZone    String
+  destZone      String
+  seats         Int
+  status        RideStatus                 @default(REQUESTED)
+  fareSoloPaisa Int
+  farePaisa     Int
+  paymentMethod PaymentMethod
+  poolId        Int?
 
-  createdAt      TimestamptzString @default(now())
-  updatedAt      temporal.updatedAtString()
+  createdAt     TimestamptzString          @default(now())
+  updatedAt     temporal.updatedAtString()
 
-  passenger      User          @relation(fields: [passengerId], references: [id])
-  pool           Pool?         @relation(fields: [poolId], references: [id])
-  events         RideEvent[]
+  passenger     User                       @relation(fields:[passengerId], references:[id])
+  pool          Pool?                      @relation(fields:[poolId], references:[id])
+  events        RideEvent[]
 
   @@index([passengerId])
   @@index([status])
@@ -69,16 +69,16 @@ model Ride {
 }
 
 model RideEvent {
-  id          Int      @id @default(autoincrement())
-  rideId      Int
-  fromStatus  RideStatus?
-  toStatus    RideStatus
-  actorId     Int?
-  note        String?
+  id         Int               @id @default(autoincrement())
+  rideId     Int
+  fromStatus RideStatus?
+  toStatus   RideStatus
+  actorId    Int?
+  note       String?
 
-  at          TimestamptzString @default(now())
+  at         TimestamptzString @default(now())
 
-  ride        Ride     @relation(fields: [rideId], references: [id])
+  ride       Ride              @relation(fields:[rideId], references:[id])
 
   @@index([rideId])
 }
@@ -91,15 +91,15 @@ enum PoolStatus {
 }
 
 model Pool {
-  id         Int        @id @default(autoincrement())
+  id         Int                        @id @default(autoincrement())
   vehicleId  Int
   pickupZone String
-  status     PoolStatus @default(OPEN)
+  status     PoolStatus                 @default(OPEN)
 
-  vehicle    Vehicle    @relation(fields: [vehicleId], references: [id])
+  vehicle    Vehicle                    @relation(fields:[vehicleId], references:[id])
   rides      Ride[]
 
-  createdAt  TimestamptzString @default(now())
+  createdAt  TimestamptzString          @default(now())
   updatedAt  temporal.updatedAtString()
 
   @@index([vehicleId])
