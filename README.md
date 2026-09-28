@@ -2,9 +2,67 @@
 
 A ride-pooling MVP for Dhaka where passengers can request rides and Tesla drivers can accept compatible requests into shared pools while respecting vehicle seat capacity.
 
+The project focuses on authentication, ride lifecycle management, pooling, fare calculation, Tesla capacity enforcement, authorization, data consistency, concurrent ride acceptance, ride history, testing, Dockerization, and deployment.
+
 ---
 
-## Problem Statement
+## Project Walkthrough Video
+
+### [Watch the 6-Minute Project Walkthrough on Loom](https://www.loom.com/share/fc42cdd15b454eaaa63bacef82382257)
+
+The walkthrough covers the problem, users, architecture, backend, frontend, database design, ride and pool lifecycle, key technical decisions, pooling, fare calculation, edge-case handling, and deployment.
+
+### Video Structure
+
+**0:00–1:00 — Problem, Users & Core Idea**
+
+- Problem
+- Passenger and driver roles
+- Core ride-pooling concept
+
+**1:00–3:00 — Engineering Walkthrough**
+
+- Architecture
+- Backend
+- Frontend
+- Database / ERD
+- Ride and pool lifecycle
+- Pooling logic
+- Concurrency protection
+- Key technical decision and trade-off
+
+**3:00–6:00 — Product Tour**
+
+- Passenger ride request
+- Driver ride acceptance
+- Shared Tesla pooling
+- Fare recalculation
+- Ride status progression
+- Capacity/concurrency edge case
+- Ride history
+- Deployment
+
+---
+
+# Live Deployment
+
+## Frontend
+
+https://tesla-seven-mocha.vercel.app/
+
+## Backend API
+
+https://tesla-b52j.onrender.com/
+
+## Database
+
+PostgreSQL hosted on Supabase.
+
+Production database credentials are intentionally not included in this repository.
+
+---
+
+# Problem Statement
 
 Dhaka Tesla Pool demonstrates a simple ride-pooling workflow between passengers and Tesla drivers.
 
@@ -13,6 +71,7 @@ Passengers can:
 - Create an account and sign in
 - Request rides using pickup and destination zones
 - Select required seats
+- Select a payment method
 - View estimated fares
 - Track ride status
 - Cancel eligible rides
@@ -28,37 +87,35 @@ Drivers can:
 - View passengers and occupied seats
 - View completed ride history
 
-The MVP focuses on:
-
-- Authentication
-- Ride lifecycle management
-- Pooling
-- Fare calculation
-- Tesla capacity enforcement
-- Authorization
-- Data consistency
-- Concurrent ride acceptance
-- Ride history
-- A simple passenger and driver experience
+The main engineering challenge is maintaining consistent ride and pool state while ensuring that Tesla capacity can never be exceeded, including when multiple ride requests are accepted concurrently.
 
 ---
 
-## Features
+# Core Features
 
-### Passenger
+## Authentication
 
-- Sign up and login
+- Passenger signup
+- Passenger login
+- Driver login
+- JWT authentication
+- Password hashing using bcrypt
+- Role-based authorization
+
+## Passenger
+
 - Request a ride
-- Select pickup and destination zones
+- Select pickup zone
+- Select destination zone
 - Select number of seats
 - Select payment method
-- View estimated fare
+- View fare estimate
 - View active ride status
+- View ride timeline
 - Cancel eligible rides
 - View ride history
-- View ride status timeline
 
-### Driver / Tesla
+## Driver / Tesla
 
 - Driver authentication
 - View available ride requests
@@ -66,15 +123,15 @@ The MVP focuses on:
 - Create or reuse a Tesla pool
 - Enforce Tesla seat capacity
 - Recalculate fares when rides become pooled
-- Mark passengers as arrived
-- Start a pooled trip
-- Complete a pooled trip
+- Mark the pool as arrived
+- Start the trip
+- Complete the trip
 - View completed ride history
 
-### Ride Pooling
+## Ride Pooling
 
 - Multiple passengers can share one Tesla
-- Pool requests use compatible pickup zones
+- Pool requests require compatible pickup zones
 - Occupied seats cannot exceed Tesla capacity
 - Individual fares are recalculated when pooling occurs
 - Ride and pool lifecycle states are persisted
@@ -82,7 +139,13 @@ The MVP focuses on:
 
 ---
 
-## Ride Lifecycle
+# Ride Lifecycle
+
+The ride lifecycle controls the complete journey of a passenger request, from the initial request to trip completion.
+
+![Ride Lifecycle](lifecycle.png)
+
+## Main Lifecycle
 
 ```text
 REQUESTED
@@ -100,85 +163,122 @@ STARTED
 COMPLETED
 ```
 
-Cancellation is allowed from valid pre-completion states:
+## Cancellation
+
+Eligible rides can be cancelled before completion:
 
 ```text
-REQUESTED
-MATCHED
-DRIVER_ARRIVED
-    |
-    v
-CANCELLED
+REQUESTED ──────────┐
+                    |
+MATCHED ────────────┼──> CANCELLED
+                    |
+DRIVER_ARRIVED ─────┘
 ```
+
+## Lifecycle Explanation
+
+### REQUESTED
+
+The passenger creates a ride request.
+
+At this point:
+
+- The ride is available for a compatible driver.
+- The ride has not yet been matched.
+- The passenger can cancel the ride.
+
+### MATCHED
+
+A driver accepts the ride.
+
+The backend:
+
+- Verifies the ride is still `REQUESTED`
+- Identifies the driver's Tesla
+- Finds or creates a compatible pool
+- Checks pickup-zone compatibility
+- Checks Tesla capacity
+- Adds the ride to the pool
+- Recalculates the pooled fare
+- Records a `RideEvent`
+
+### DRIVER_ARRIVED
+
+The driver reaches the pickup location.
+
+The pool and its active rides move to `DRIVER_ARRIVED`.
+
+### STARTED
+
+The driver starts the trip.
+
+The pool and its active rides move to `STARTED`.
+
+### COMPLETED
+
+The trip finishes.
+
+The pool and its rides move to `COMPLETED`.
+
+The completed ride becomes part of passenger and driver history.
+
+### CANCELLED
+
+Eligible rides can be cancelled before completion.
+
+The backend rejects:
+
+- Cancellation of an already completed ride
+- Duplicate cancellation
+- Unauthorized cancellation
+- Invalid lifecycle transitions
+
+## Why the Lifecycle Matters
+
+The frontend displays the current ride state, but the backend is responsible for enforcing the lifecycle.
+
+This prevents clients from arbitrarily changing a ride from `REQUESTED` directly to `COMPLETED` or performing another invalid transition.
+
+Every important transition is also stored in `RideEvent`, providing a complete ride timeline.
 
 ---
 
-## Screenshots
+# Architecture
 
-The project includes screenshots covering the main passenger and driver flows.
+The application follows a simple layered architecture.
 
-### Authentication
+![Architecture](archi.png)
 
-#### Sign Up
+The main request flow is:
 
-![Sign Up](sign%20up.png)
-
-#### Login
-
-![Login](login.png)
-
-### Passenger Flow
-
-#### Ride Request
-
-![Ride Request](request%20ride.png)
-
-#### Ride Request / Active Request
-
-![Ride Request](ride%20req.png)
-
-#### Ride History
-
-![Ride History](ride%20history.png)
-
-#### Cancel Ride
-
-![Cancel Ride](cancel%20ride.png)
-
-### Driver Flow
-
-#### Driver Ride Requests
-
-![Driver Ride Requests](ride%20req.png)
-
-#### Driver Started Ride
-
-![Driver Started](drive%20started.png)
-
-#### Driver Marked Arrived
-
-![Driver Arrived](marked%20arrived.png)
-
-> Additional screenshots covering ride acceptance and completed pool states are included in the project repository alongside the other UI evidence.
-
----
-
-## Architecture
-
-The application follows a simple layered architecture:
-
-```mermaid
-flowchart TD
-    A[Browser] --> B[Next.js / React]
-    B --> C[Node.js / Express API]
-    C --> D[Authentication Middleware]
-    C --> E[Controllers]
-    E --> F[Services / Business Logic]
-    F --> G[Prisma ORM / PostgreSQL]
-    G --> H[(PostgreSQL Database)]
+```text
+Browser
+   |
+   v
+Next.js / React
+   |
+   | HTTP + JWT
+   v
+Node.js / Express API
+   |
+   v
+Middleware / Controllers
+   |
+   v
+Services / Business Logic
+   |
+   +----------------------+
+   |                      |
+   v                      v
+Prisma ORM        PostgreSQL Transaction
+   |                      |
+   +----------+-----------+
+              |
+              v
+         PostgreSQL
 ```
 
-Business rules are enforced in the backend rather than the UI.
+Business rules are enforced in the backend rather than being trusted to the frontend.
 
 Important backend responsibilities include:
 
@@ -194,60 +294,51 @@ Important backend responsibilities include:
 
 ---
 
-## Database / ERD
+# Database / ERD
 
-![Database ERD](erd.png)
+The database ERD screenshot is captured from the Supabase PostgreSQL database.
+
+![Database ERD](erd-supabase.png)
 
 The main database entities are:
 
-- User
-- Vehicle
-- Ride
-- Pool
-- RideEvent
+- `User`
+- `Vehicle`
+- `Ride`
+- `Pool`
+- `RideEvent`
 
-The database uses relational constraints and indexes to support ride ownership, pool membership, lifecycle tracking, and capacity-sensitive operations.
+The database uses relational constraints and indexes to support:
+
+- Ride ownership
+- Pool membership
+- Lifecycle tracking
+- Passenger history
+- Driver history
+- Capacity-sensitive operations
 
 ---
 
-## Technology Stack
+# Technology Stack
 
 | Layer | Technology |
 |---|---|
 | Frontend | Next.js, React, TypeScript, Tailwind CSS |
 | Backend | Node.js, Express |
 | Database | PostgreSQL |
-| ORM / Database Client | Prisma ORM |
+| ORM / Database Client | Prisma ORM + PostgreSQL client |
 | Authentication | JWT + bcrypt |
-| Validation | Backend request validation |
 | Containerization | Docker / Docker Compose |
 | Database Migration | Prisma migrations |
 | Testing | Vitest |
 | Version Control | Git / GitHub |
+| Frontend Deployment | Vercel |
+| Backend Deployment | Render |
+| Database Hosting | Supabase PostgreSQL |
 
 ---
 
-## Why PostgreSQL?
-
-A relational database fits the ride-pooling domain because rides, passengers, vehicles, pools, and ride events have clear relationships and consistency requirements.
-
-PostgreSQL also provides row-level locking, which is used to protect Tesla pool capacity during concurrent ride acceptance.
-
-The critical acceptance transaction locks the Tesla/Vehicle row before calculating available capacity.
-
----
-
-## Why a Simple Architecture?
-
-The project intentionally avoids unnecessary microservices, Kafka, Kubernetes, Redis, or queue infrastructure.
-
-The assessment focuses on a reliable ride-pooling MVP, so a modular Node.js API with PostgreSQL is sufficient and easier to understand, test, deploy, and maintain.
-
-Additional infrastructure would become useful at larger scale and is discussed in the scaling section.
-
----
-
-## Project Structure
+# Project Structure
 
 ```text
 tesla/
@@ -255,13 +346,41 @@ tesla/
 ├── backend/
 │   ├── src/
 │   │   ├── controllers/
+│   │   │   ├── auth.controller.js
+│   │   │   ├── driver.controller.js
+│   │   │   └── ride.controller.js
+│   │   │
 │   │   ├── handler/
+│   │   │   └── asyncHandler.js
+│   │   │
 │   │   ├── middleware/
+│   │   │   ├── auth.middleware.js
+│   │   │   └── error.middleware.js
+│   │   │
 │   │   ├── prisma/
+│   │   │   ├── contract.prisma
+│   │   │   ├── contract.json
+│   │   │   ├── contract.d.ts
+│   │   │   └── migrations/
+│   │   │
 │   │   ├── routes/
+│   │   │   ├── auth.routes.js
+│   │   │   ├── driver.routes.js
+│   │   │   └── ride.routes.js
+│   │   │
 │   │   ├── services/
+│   │   │   ├── auth.service.js
+│   │   │   ├── driver.service.js
+│   │   │   └── ride.service.js
+│   │   │
 │   │   ├── utils/
+│   │   │   ├── auth.js
+│   │   │   └── fare.js
+│   │   │
 │   │   ├── validators/
+│   │   │   ├── auth.validator.js
+│   │   │   └── ride.validator.js
+│   │   │
 │   │   ├── app.js
 │   │   └── server.js
 │   │
@@ -273,8 +392,19 @@ tesla/
 │
 ├── frontend/
 │   ├── app/
+│   │   ├── page.tsx
+│   │   ├── passenger/
+│   │   │   └── page.tsx
+│   │   └── driver/
+│   │       └── page.tsx
+│   │
 │   ├── components/
+│   │   ├── passenger/
+│   │   └── driver/
+│   │
 │   ├── hook/
+│   │   └── auth.ts
+│   │
 │   ├── lib/
 │   ├── types/
 │   ├── utils/
@@ -283,34 +413,54 @@ tesla/
 │   ├── .env.example
 │   └── package.json
 │
+├── acceptedridetopool.png
 ├── archi.png
+├── cancel ride.png
+├── completed pool.png
+├── drive started.png
+├── erd-supabase.png
 ├── erd.png
+├── lifecycle.png
+├── login.png
+├── marked arrived.png
+├── request ride.png
+├── ride history.png
+├── ride req.png
+├── sign up.png
+│
 ├── docker-compose.yml
-├── .env.example
+├── .dockerignore
 ├── .gitignore
+├── tsconfig.json
 └── README.md
 ```
 
 ---
 
-## Prerequisites
+# Prerequisites
 
-For local development:
+Install:
 
-- Node.js 20+
+- Node.js
 - npm
-- Docker Desktop
 - Git
+- Docker Desktop
 
-For the recommended Docker workflow, Docker Desktop is sufficient.
+Docker is recommended for running the complete application locally.
 
 ---
 
-## Environment Variables
+# Environment Variables
 
-### Backend
+## Backend
 
-Create `backend/.env` from `backend/.env.example`.
+Create:
+
+```text
+backend/.env
+```
+
+Use `backend/.env.example` as the template.
 
 Example:
 
@@ -320,39 +470,79 @@ JWT_SECRET="your-development-secret"
 PORT=5000
 ```
 
-### Frontend
+## Frontend
 
-Create `frontend/.env` from `frontend/.env.example`.
+Create:
 
-Example:
-
-```env
-NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```text
+frontend/.env.local
 ```
 
-### Docker
+For local development:
 
-Docker Compose provides the required database connection and backend JWT secret for the containerized environment.
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
 
-Never commit real secrets, API keys, tokens, or production credentials.
+For production:
+
+```env
+NEXT_PUBLIC_API_URL=https://tesla-b52j.onrender.com
+```
+
+The frontend API client appends `/api` to the configured base URL.
+
+Never commit:
+
+- `.env`
+- `.env.local`
+- Database passwords
+- JWT secrets
+- API keys
+- Access tokens
+- Production credentials
 
 ---
 
-# Running with Docker
+# Local Setup
 
-Docker Compose runs the application stack:
+Clone the repository:
 
-```text
-Frontend
-    |
-    v
-Backend API
-    |
-    v
-PostgreSQL
+```bash
+git clone https://github.com/Pial-crypto/Tesla.git
 ```
 
-### Start the full stack
+Enter the project:
+
+```bash
+cd Tesla
+```
+
+Install backend dependencies:
+
+```bash
+cd backend
+npm install
+```
+
+Install frontend dependencies:
+
+```bash
+cd ../frontend
+npm install
+```
+
+---
+
+# Docker Setup
+
+The project includes Docker Compose for:
+
+- PostgreSQL
+- Backend
+- Frontend
+
+## Start the Complete Stack
 
 From the project root:
 
@@ -360,7 +550,7 @@ From the project root:
 docker compose up -d
 ```
 
-### Check containers
+## Check Containers
 
 ```bash
 docker compose ps
@@ -374,7 +564,27 @@ tesla-backend
 tesla-frontend
 ```
 
-### View logs
+## Local URLs
+
+Frontend:
+
+```text
+http://localhost:3000
+```
+
+Backend:
+
+```text
+http://localhost:5000
+```
+
+PostgreSQL:
+
+```text
+localhost:5432
+```
+
+## View Logs
 
 Backend:
 
@@ -394,19 +604,19 @@ PostgreSQL:
 docker compose logs postgres
 ```
 
-### Stop the stack
+## Stop the Stack
 
 ```bash
 docker compose down
 ```
 
-The PostgreSQL database uses a Docker volume so data can persist between normal container restarts.
+PostgreSQL data uses the Docker volume `postgres_data`.
 
 ---
 
-## Docker Services
+# Docker Services
 
-### PostgreSQL
+## PostgreSQL
 
 - Image: `postgres:17-alpine`
 - Database: `tesla_pool`
@@ -414,37 +624,26 @@ The PostgreSQL database uses a Docker volume so data can persist between normal 
 - Port: `5432`
 - Health check: `pg_isready`
 
-### Backend
+## Backend
 
 - Node.js 22 Alpine
 - Express API
 - Port: `5000`
-- Depends on the healthy PostgreSQL service
+- Depends on healthy PostgreSQL
 
-### Frontend
+## Frontend
 
 - Next.js
 - Port: `3000`
-- Depends on the backend service
+- Depends on backend
 
 ---
 
-# Database Setup
+# Database Migration and Seed
 
 The project uses Prisma migrations and a development seed containing the assessment story cast.
 
-### Demo data
-
-The seed contains:
-
-- Jashim — Driver
-- Nusrat — Passenger
-- Rafiq — Passenger
-- Shirin — Passenger
-- Bullet — Tesla
-- Bullet capacity — 3 seats
-
-### Prisma contract
+## Generate Prisma Contract
 
 From the backend directory:
 
@@ -453,28 +652,52 @@ cd backend
 npx prisma contract emit
 ```
 
-### Apply migrations
+## Apply Migrations
 
 ```bash
 npx prisma db migrate
 ```
 
-### Check migration status
+## Check Migration Status
 
 ```bash
 npx prisma migration status
 ```
 
-The backend startup flow initializes the database and seeds the required development data when the seed data does not already exist.
+The project includes:
+
+- Initial database schema migration
+- Pooling migration
+
+The production backend runs migration and seed initialization before starting the API.
 
 ---
 
-## Demo Credentials
+# Seed Data
 
-The seeded demo users use the development password:
+The seed contains the assessment story users:
+
+- Jashim — Driver
+- Nusrat — Passenger
+- Rafiq — Passenger
+- Shirin — Passenger
+
+The seeded Tesla is:
 
 ```text
-password123
+Name: Bullet
+Capacity: 3 seats
+Driver: Jashim
+```
+
+---
+
+# Demo Credentials
+
+All seeded demo users use:
+
+```text
+Password: password123
 ```
 
 | Role | Name | Email |
@@ -483,14 +706,6 @@ password123
 | Passenger | Nusrat | nusrat@oitesla.test |
 | Passenger | Rafiq | rafiq@oitesla.test |
 | Passenger | Shirin | shirin@oitesla.test |
-
-Tesla:
-
-```text
-Name: Bullet
-Capacity: 3 seats
-Driver: Jashim
-```
 
 These credentials are for local/demo evaluation only.
 
@@ -506,9 +721,7 @@ npm install
 npm run dev
 ```
 
-The backend runs on the configured API port.
-
-Default local URL:
+Backend:
 
 ```text
 http://localhost:5000
@@ -526,7 +739,7 @@ npm install
 npm run dev
 ```
 
-Open:
+Frontend:
 
 ```text
 http://localhost:3000
@@ -535,6 +748,12 @@ http://localhost:3000
 ---
 
 # API Overview
+
+All API endpoints are prefixed with:
+
+```text
+/api
+```
 
 ## Authentication
 
@@ -573,23 +792,9 @@ Role-based authorization prevents passengers from accessing driver-only operatio
 
 # Fare Model
 
-The MVP uses a simple deterministic zone-based fare model.
+The MVP uses a deterministic zone-based fare model.
 
-The fare calculation is based on:
-
-```text
-Solo Fare = Base Fare + Distance Charge
-```
-
-For pooled rides:
-
-```text
-Pooled Fare = Solo Fare - Pool Discount
-```
-
-The implementation stores monetary values as integer paisa rather than floating-point currency values.
-
-Current model:
+## Current Configuration
 
 ```text
 Base Fare = 5000 paisa
@@ -597,9 +802,23 @@ Distance Charge = 2000 paisa per zone distance
 Pool Discount = 15%
 ```
 
-The fare is multiplied by the number of requested seats.
+## Solo Fare
 
-The distance model uses the predefined Dhaka zone ordering rather than real road distance.
+```text
+Solo Fare = (Base Fare + Distance Charge) × Seats
+```
+
+## Pooled Fare
+
+```text
+Pooled Fare = Solo Fare × (1 - Pool Discount)
+```
+
+The implementation stores monetary values as integer paisa rather than floating-point currency values.
+
+When a ride joins a pool, its pooled fare is recalculated.
+
+The original solo fare is also preserved.
 
 ---
 
@@ -609,85 +828,87 @@ The MVP intentionally avoids external map and routing APIs.
 
 Supported zones include:
 
-```text
-Banani
-Mohakhali
-Gulshan 1
-Farmgate
-Uttara
-Dhanmondi
-Mirpur
-Bashundhara
-```
+- Banani
+- Mohakhali
+- Gulshan 1
+- Farmgate
+- Uttara
+- Dhanmondi
+- Mirpur
+- Bashundhara
 
-The current pool compatibility rule is deterministic:
+The current pool compatibility rule is:
 
 ```text
-Compatible pool
-    =
-Same pickup zone
+Compatible Pool = Same Pickup Zone
 ```
 
-This keeps matching predictable and easy to test.
+This keeps matching deterministic and easy to test.
 
 ---
 
-# Testing
+# Pooling and Capacity
 
-The application includes automated tests using Vitest.
+Each Tesla has a configured seat capacity.
 
-Run the test suite from the project root:
+The seeded Tesla:
 
-```bash
-npm test
+```text
+Name: Bullet
+Capacity: 3 seats
 ```
 
-Important tested behaviors include:
+When a driver accepts a ride, the backend:
 
-- Passenger can create a ride request
-- Driver can accept a requested ride
-- Ride lifecycle transitions work
-- Invalid state transitions are rejected
-- Pooling combines compatible ride requests
-- Pool capacity cannot be exceeded
-- Pooled fares are recalculated
-- Passenger cancellation works
-- Duplicate cancellation is rejected
-- Passenger ownership is enforced
-- Passenger cannot access driver-only operations
-- Passenger ride history and timeline work
-- Driver pool history works
-- Concurrent ride acceptance is protected using PostgreSQL row-level locking
+1. Checks that the ride is still `REQUESTED`.
+2. Identifies the driver's Tesla.
+3. Finds or creates a compatible pool.
+4. Checks pickup-zone compatibility.
+5. Locks the relevant database rows.
+6. Calculates currently occupied seats.
+7. Checks remaining Tesla capacity.
+8. Rejects the request if capacity would be exceeded.
+9. Adds the ride to the pool.
+10. Recalculates pooled fares.
+11. Records the ride event.
 
-Additional verification performed during development:
+Capacity rule:
 
-- PostgreSQL Docker container starts successfully
-- Database migrations are applied successfully
-- Frontend production build succeeds
-- Session persists across refresh
-- Docker backend and frontend images build successfully
-- Full Docker Compose stack starts successfully
+```text
+occupied seats + requested seats <= vehicle capacity
+```
 
 ---
 
 # Concurrency Strategy
 
-Pool capacity is a critical consistency rule.
+Pool capacity is a critical consistency requirement.
 
-Bullet has a fixed capacity of three seats. Two passengers may attempt to claim the remaining seats at nearly the same time.
+Example:
 
-A simple read-then-write approach could create a race condition:
+```text
+Tesla capacity = 3
+Current occupied seats = 2
+Remaining seats = 1
+```
+
+Two passengers may attempt to claim the remaining seat at nearly the same time.
+
+Without concurrency protection:
 
 ```text
 Request A → sees 1 seat available
 Request B → sees 1 seat available
+
 Request A → accepts
 Request B → accepts
 ```
 
-This could incorrectly exceed the Tesla capacity.
+This could incorrectly exceed Tesla capacity.
 
-The backend instead opens a PostgreSQL transaction and locks the Tesla/Vehicle row:
+The backend uses a PostgreSQL transaction with row-level locking.
+
+Conceptually:
 
 ```sql
 SELECT "id", "capacity"
@@ -696,101 +917,121 @@ WHERE "driverId" = $1
 FOR UPDATE;
 ```
 
-This serializes capacity-sensitive acceptance operations for the same Tesla.
+The critical transaction:
 
-The transaction then:
+1. Begins a PostgreSQL transaction.
+2. Locks the driver's Tesla row.
+3. Locks the requested ride.
+4. Finds or creates the active pool.
+5. Locks active pool rides.
+6. Calculates occupied seats.
+7. Validates capacity.
+8. Updates the accepted ride.
+9. Recalculates pooled fares.
+10. Creates the `RideEvent`.
+11. Commits the transaction.
 
-1. Locks the Tesla
-2. Locks the requested ride
-3. Finds or creates the compatible pool
-4. Locks active pool rides
-5. Calculates occupied seats
-6. Validates remaining capacity
-7. Updates the accepted ride
-8. Recalculates pooled fares
-9. Creates the ride event
-10. Commits the transaction
+Another concurrent request targeting the same Tesla must wait for the first transaction to complete before performing its own capacity calculation.
 
-If another request attempts to accept a ride for the same Tesla concurrently, it waits for the existing transaction to finish before performing its own capacity calculation.
-
-This prevents two concurrent requests from consuming the same remaining seat.
-
-At larger scale, this can be extended with:
-
-- Idempotency keys
-- More targeted locking
-- Queue/event-based processing
-- Distributed coordination where necessary
-- Additional observability
-- Better retry and failure handling
+This prevents concurrent ride acceptance from exceeding Tesla capacity.
 
 ---
 
-## Screenshots / UI Evidence
+# Testing
 
-### Authentication
+The application includes automated tests using Vitest.
 
-#### Sign Up
-![Sign Up](sign%20up.png)
+Run:
 
-#### Login
-![Login](login.png)
+```bash
+cd backend
+npm test
+```
 
-### Passenger Flow
+The automated test suite covers:
 
-#### Ride Request
-![Ride Request](request%20ride.png)
+- Fare calculation
+- Pool discount
+- Seat multiplication
+- Ride acceptance
+- Full ride lifecycle
+- Invalid state transitions
+- Sequential capacity protection
+- Concurrent capacity protection
 
-#### Ride History
-![Ride History](ride%20history.png)
+Additional integration verification covered:
 
-#### Cancel Ride
-![Cancel Ride](cancel%20ride.png)
-
-### Driver Flow
-
-#### Ride Request
-![Driver Ride Request](ride%20req.png)
-
-#### Ride Accepted
-![Ride Accepted](acceptedridetopool.png)
-
-#### Driver Started
-![Driver Started](drive%20started.png)
-
-#### Driver Arrived
-![Driver Arrived](marked%20arrived.png)
-
-#### Completed Pool
-![Completed Pool](completed%20pool.png)
+- Passenger ride request
+- Driver acceptance
+- Driver arrival
+- Trip start
+- Trip completion
+- Pooling
+- Fare repricing
+- Capacity protection
+- Ride cancellation
+- Duplicate cancellation
+- Passenger ownership authorization
+- Driver endpoint authorization
+- Passenger ride history
+- Driver history
+- Docker startup
+- Database migration status
+- Frontend production build
+- Session persistence
 
 ---
 
 # Deployment
 
-Deployment will use free/free-tier infrastructure only.
+The application is deployed using free/free-tier infrastructure.
 
-Public deployment URLs will be added after deployment verification.
+## Frontend
 
-### Frontend
+Vercel:
+
+https://tesla-seven-mocha.vercel.app/
+
+## Backend
+
+Render:
+
+https://tesla-b52j.onrender.com/
+
+## Database
+
+Supabase PostgreSQL.
+
+Production database credentials are configured through deployment environment variables and are not committed to the repository.
+
+---
+
+# Production Architecture
 
 ```text
-TBD
+                    User Browser
+                         |
+                         v
+                ┌─────────────────┐
+                │     Vercel      │
+                │ Next.js Frontend│
+                └────────┬────────┘
+                         |
+                         | HTTPS / REST
+                         v
+                ┌─────────────────┐
+                │     Render      │
+                │ Node / Express  │
+                │      API        │
+                └────────┬────────┘
+                         |
+                         | PostgreSQL
+                         v
+                ┌─────────────────┐
+                │    Supabase     │
+                │   PostgreSQL    │
+                └─────────────────┘
 ```
-
-### Backend API
-
-```text
-TBD
-```
-
-### Database
-
-```text
-TBD
-```
-
-If free backend hosting is not suitable for the final environment, the project remains reproducible through Docker Compose.
 
 ---
 
@@ -798,9 +1039,9 @@ If free backend hosting is not suitable for the final environment, the project r
 
 ## PostgreSQL
 
-PostgreSQL was chosen because the application has relational data and strict consistency requirements around ride pooling and Tesla capacity.
+PostgreSQL was selected because the application has strongly related entities and strict consistency requirements around ride pooling and Tesla capacity.
 
-An alternative such as a document database could store ride data, but the relational model is more natural for:
+The relational model fits:
 
 - Users
 - Vehicles
@@ -809,29 +1050,30 @@ An alternative such as a document database could store ride data, but the relati
 - Ride events
 - Relationships
 - Constraints
-- Transactional consistency
-
----
+- Transactions
 
 ## JWT Authentication
 
 JWT provides a simple stateless authentication mechanism suitable for this MVP.
 
-It keeps the backend API independent from frontend session storage while allowing protected endpoints to validate the authenticated user and role.
+Passwords are hashed using bcrypt.
 
----
+Protected API endpoints validate the authenticated user and role.
 
 ## Prisma
 
-Prisma is used for schema management, migrations, generated database contracts, and regular application database operations.
+Prisma is used for:
 
-A lower-level PostgreSQL client is additionally used for the concurrency-critical transaction because the required row-locking behavior needed a direct PostgreSQL transaction surface.
+- Schema management
+- Migrations
+- Generated database contracts
+- Regular database operations
 
----
+A PostgreSQL client is additionally used for the concurrency-critical transaction because direct row-level locking is required for the capacity-sensitive operation.
 
 ## Zone-Based Matching
 
-The MVP uses predefined Dhaka zones instead of real routing/geospatial infrastructure.
+The MVP uses predefined Dhaka zones rather than real routing or geospatial infrastructure.
 
 This keeps the matching model:
 
@@ -839,10 +1081,6 @@ This keeps the matching model:
 - Easy to test
 - Easy to explain
 - Free from external map API dependencies
-
-A production implementation would require real geospatial and route compatibility logic.
-
----
 
 ## Simple Fare Calculation
 
@@ -855,15 +1093,13 @@ The goal is to demonstrate:
 - Pool discounts
 - Fare recalculation
 
-rather than implement a production-grade routing and dynamic pricing engine.
-
----
+rather than build a production-grade routing and dynamic pricing engine.
 
 ## Row-Level Locking
 
-Vehicle-level PostgreSQL row locking was selected to prevent concurrent acceptance requests from exceeding Tesla capacity.
+PostgreSQL row-level locking was selected for the capacity race condition.
 
-This solves the MVP consistency problem without introducing distributed locking infrastructure.
+This provides database-level consistency without introducing distributed locking infrastructure.
 
 ---
 
@@ -872,13 +1108,13 @@ This solves the MVP consistency problem without introducing distributed locking 
 - Zone-based distance is not real road distance.
 - No live GPS tracking.
 - No real payment processing.
-- No production-grade route optimization.
+- No production routing engine.
 - Matching is intentionally simplified.
-- Real-time driver/passenger updates are not implemented through WebSockets.
-- Production deployment infrastructure is intentionally lightweight.
-- Pool matching currently uses a deterministic pickup-zone compatibility rule.
-- No distributed queue/event infrastructure is required for the MVP.
-- No advanced dynamic pricing or traffic-aware fare calculation.
+- No WebSocket-based live ride updates.
+- No distributed event infrastructure.
+- No external map provider.
+- No advanced dynamic pricing.
+- Free-tier deployment infrastructure may experience cold starts.
 
 ---
 
@@ -887,80 +1123,51 @@ This solves the MVP consistency problem without introducing distributed locking 
 Potential future improvements include:
 
 - Real geospatial matching
+- PostGIS
 - Live GPS tracking
-- WebSocket-based real-time ride updates
+- WebSocket-based ride updates
 - Real payment integration
 - Smarter route compatibility
-- Idempotency keys for ride acceptance
-- Rate limiting
-- Observability and distributed tracing
-- Read replicas and caching
-- Queue/event infrastructure for high-volume matching
-- Better retry and failure handling
-- Driver availability and online/offline state
-- Production-grade monitoring and alerting
+- Idempotency keys
+- API rate limiting
+- Better observability
+- Distributed tracing
+- Redis caching
+- Queue/event infrastructure
+- Improved matching algorithms
+- Production monitoring
+- Retry handling
+- Driver online/offline state
 
 ---
 
-# Scaling Considerations — Bonus
+# Scaling Considerations
 
-If Dhaka Tesla Pool grows significantly, the architecture would need to evolve beyond the current MVP.
+If the platform grows significantly, the current modular API could evolve into a horizontally scalable architecture.
 
-A hypothetical large-scale environment could involve:
+Potential improvements include:
 
-```mermaid
-flowchart TD
-    A[Clients] --> B[Load Balancer]
-    B --> C[Frontend Instances]
-    B --> D[API Instances]
+## API Scaling
 
-    D --> E[Authentication / Authorization]
-    D --> F[Ride Matching Service]
-    D --> G[Pool Management]
+- Run multiple API instances
+- Place a load balancer in front of the API
+- Keep PostgreSQL as the transactional source of truth
 
-    F --> H[(Primary PostgreSQL)]
-    G --> H
+## Database Scaling
 
-    H --> I[(Read Replicas)]
-
-    D --> J[Cache]
-    F --> K[Message Queue]
-
-    K --> L[Async Workers]
-
-    D --> M[Observability]
-    H --> M
-    K --> M
-```
-
-### Horizontal Scaling
-
-The API layer can be horizontally scaled behind a load balancer.
-
-Multiple Node.js API instances can process independent requests while PostgreSQL remains the source of truth for transactional ride and pool state.
-
-### Database Scaling
-
-At larger scale:
-
-- Add appropriate composite indexes
-- Use read replicas for read-heavy workloads
-- Separate transactional writes from reporting workloads
+- Add targeted composite indexes
+- Use read replicas for read-heavy operations
 - Optimize pool and ride queries
 - Monitor lock contention
 - Consider partitioning for very large ride/event tables
 
-### Caching
+## Caching
 
-Frequently accessed data could be cached, such as:
+Frequently accessed non-transactional data could use Redis or another cache.
 
-- Static zone information
-- Driver availability
-- Frequently requested metadata
+Transactional ride and capacity state should remain backed by PostgreSQL.
 
-Transactional ride and capacity state should continue to rely on the database as the source of truth.
-
-### Geospatial Search
+## Geospatial Matching
 
 The current zone-based matching model could be replaced with:
 
@@ -970,34 +1177,33 @@ The current zone-based matching model could be replaced with:
 - Radius-based matching
 - Route compatibility calculations
 
-### Queues and Events
+## Queues and Events
 
-High-volume matching could move non-critical asynchronous operations to a queue:
+Non-critical asynchronous operations could move to a queue:
 
 - Notifications
 - Analytics
 - Audit processing
-- Matching events
 - Reporting
 - External integrations
 
-Critical capacity decisions would still require transactional consistency.
+Critical capacity decisions would continue to use transactional database operations.
 
-### Real-Time Communication
+## Real-Time Communication
 
 WebSockets or Server-Sent Events could provide:
 
 - Driver location updates
 - Ride status updates
 - Arrival notifications
-- Pool membership changes
+- Pool membership updates
 - Trip completion updates
 
-### Idempotency
+## Idempotency
 
-Ride acceptance and other state-changing operations could use idempotency keys to prevent duplicate requests caused by network retries or client re-submissions.
+State-changing operations such as ride acceptance could use idempotency keys to prevent duplicate requests caused by retries.
 
-### Observability
+## Observability
 
 A production deployment should include:
 
@@ -1008,21 +1214,6 @@ A production deployment should include:
 - Database monitoring
 - Lock/contention monitoring
 - API latency monitoring
-
-### Security
-
-At larger scale:
-
-- Rate limiting
-- Stronger secret management
-- Token rotation
-- Request validation
-- Audit logging
-- Security headers
-- Abuse detection
-- Centralized identity management
-
-The MVP intentionally does not implement all of these systems because they are not required to demonstrate the core ride-pooling problem.
 
 ---
 
@@ -1038,72 +1229,31 @@ AI tools were used during development as engineering assistance for:
 - Concurrency analysis
 - Documentation drafting
 
-AI-generated suggestions were reviewed, tested, and modified where necessary rather than accepted blindly.
+AI-generated suggestions were reviewed, tested, and modified where necessary.
 
 The developer remains responsible for understanding and maintaining the implementation.
 
 ## Accepted Suggestion
 
-Using PostgreSQL row-level locking with:
+The PostgreSQL row-locking approach was accepted for protecting Tesla capacity during concurrent ride acceptance.
 
-```sql
-SELECT ... FOR UPDATE
-```
+This directly addresses the consistency requirement without introducing unnecessary distributed infrastructure.
 
-for the Tesla capacity race condition was accepted because it directly addresses the consistency requirement without introducing unnecessary infrastructure.
-
-## Rejected / Changed Suggestion
+## Changed Approach
 
 An initial approach attempted to use the Prisma runtime transaction/raw API for the locking query.
 
-Runtime behavior did not expose the required raw transaction surface reliably, so the implementation was changed to use a dedicated PostgreSQL connection pool for the critical transaction.
+The runtime behavior did not expose the required raw transaction surface reliably.
 
-This keeps the capacity-sensitive operations inside the same PostgreSQL transaction.
+The implementation was changed to use a dedicated PostgreSQL connection pool for the critical transaction.
 
----
-
-# Demo Video
-
-Final six-minute demonstration video:
-
-```text
-TBD
-```
-
-The final video will cover:
-
-### 0:00 – 1:00
-
-- Problem understanding
-- Users
-- Core ride-pooling idea
-
-### 1:00 – 3:00
-
-- Architecture
-- Backend
-- Frontend
-- Database design
-- Ride lifecycle
-- Pooling
-- Key engineering decision
-- Trade-off
-
-### 3:00 – 6:00
-
-- Passenger flow
-- Driver flow
-- Shared Tesla pooling
-- Fare calculation
-- Ride status
-- Capacity/concurrency edge case
-- Deployment
+This keeps the capacity check, ride update, fare recalculation, and ride event creation inside one database transaction.
 
 ---
 
 # Git Workflow
 
-The project follows the assessment's Git workflow:
+The project uses feature branches and integration branches.
 
 ```text
 feature/*
@@ -1118,23 +1268,37 @@ pre-release
 release/v1.0.0
 ```
 
-Feature branches are used for logical development work.
-
-Examples:
+Feature branches include:
 
 ```text
 feature/auth
-feature/ride-request
-feature/pooling
 feature/driver-flow
+feature/pooling
 feature/project-foundation
+feature/ride-request
 ```
 
-The project uses incremental commits rather than one large final commit.
+The deployment workflow is:
+
+```text
+Feature Development
+        |
+        v
+     master
+        |
+        v
+   pre-release
+        |
+        v
+Deployment Verification
+        |
+        v
+ release/v1.0.0
+```
 
 ---
 
-# Commit Message Convention
+# Commit Convention
 
 Commit messages follow:
 
@@ -1167,6 +1331,158 @@ build
 
 ---
 
+# Product Walkthrough
+
+The final walkthrough demonstrates the complete product flow.
+
+## Passenger
+
+```text
+Passenger Login
+      |
+      v
+Request Ride
+      |
+      v
+REQUESTED
+```
+
+## Driver
+
+```text
+Driver Login
+      |
+      v
+View Ride Request
+      |
+      v
+Accept Ride
+      |
+      v
+MATCHED
+```
+
+## Pooling
+
+```text
+Second Compatible Passenger
+      |
+      v
+Existing Tesla Pool
+      |
+      v
+Capacity Validation
+      |
+      v
+Fare Recalculation
+```
+
+## Trip
+
+```text
+MATCHED
+   |
+   v
+DRIVER_ARRIVED
+   |
+   v
+STARTED
+   |
+   v
+COMPLETED
+```
+
+## Edge Cases
+
+The system handles:
+
+- Tesla capacity overflow
+- Invalid ride state transitions
+- Unauthorized ride modification
+- Duplicate cancellation
+- Passenger access to driver-only operations
+- Concurrent ride acceptance
+
+---
+
+# Security Notes
+
+Never commit:
+
+```text
+.env
+.env.local
+DATABASE_URL
+JWT_SECRET
+Database passwords
+API keys
+Access tokens
+Production credentials
+```
+
+Use `.env.example` files for documentation and setup guidance.
+
+Production credentials are stored as deployment environment variables.
+
+---
+
+# Screenshots Reference
+
+The following screenshots are included in the repository root:
+
+- `login.png`
+- `sign up.png`
+- `request ride.png`
+- `ride req.png`
+- `acceptedridetopool.png`
+- `marked arrived.png`
+- `drive started.png`
+- `completed pool.png`
+- `ride history.png`
+- `cancel ride.png`
+- `archi.png`
+- `erd-supabase.png`
+- `lifecycle.png`
+
+---
+
+# Final Submission Checklist
+
+- [x] Passenger authentication
+- [x] Driver authentication
+- [x] Ride request
+- [x] Ride lifecycle
+- [x] Ride cancellation
+- [x] Ride history
+- [x] Driver request list
+- [x] Driver ride acceptance
+- [x] Tesla pooling
+- [x] Pool capacity enforcement
+- [x] Fare recalculation
+- [x] Backend authorization
+- [x] Ride ownership protection
+- [x] Invalid state transition protection
+- [x] Concurrency protection
+- [x] PostgreSQL migrations
+- [x] Seed/demo data
+- [x] Docker setup
+- [x] Automated tests
+- [x] Frontend production build
+- [x] Architecture diagram
+- [x] Supabase database ERD
+- [x] Ride lifecycle diagram
+- [x] Passenger screenshots
+- [x] Driver screenshots
+- [x] Vercel deployment
+- [x] Render deployment
+- [x] Supabase PostgreSQL
+- [x] AI usage documentation
+- [x] Six-minute project walkthrough
+- [x] Git workflow
+- [x] Scaling considerations
+
+---
+
 # License
 
-This project was created as an engineering assessment project for demonstrating full-stack development, backend architecture, database design, testing, Dockerization, and engineering decision-making.
+This project was created as an engineering assessment project for demonstrating full-stack development, backend architecture, database design, testing, Dockerization, deployment, concurrency handling, and engineering decision-making.
