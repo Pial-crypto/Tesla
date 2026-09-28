@@ -184,7 +184,7 @@ setRequests(data.rides ?? []);
 
   function handleLogout() {
     clearSession();
-    router.replace("/login");
+    router.replace("/");
   }
 
   if (loading) {
