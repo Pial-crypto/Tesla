@@ -183,6 +183,7 @@ setRequests(data.rides ?? []);
   }
 
   function handleLogout() {
+console.log("logout clicked")
     clearSession();
     router.replace("/");
   }
