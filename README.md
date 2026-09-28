@@ -1426,25 +1426,60 @@ Production credentials are stored as deployment environment variables.
 
 ---
 
-# Screenshots Reference
+## Screenshots
 
-The following screenshots are included in the repository root:
+### Authentication
 
-- `login.png`
-- `sign up.png`
-- `request ride.png`
-- `ride req.png`
-- `acceptedridetopool.png`
-- `marked arrived.png`
-- `drive started.png`
-- `completed pool.png`
-- `ride history.png`
-- `cancel ride.png`
-- `archi.png`
-- `erd-supabase.png`
-- `lifecycle.png`
+#### Login
+![Login](login.png)
+
+#### Sign Up
+![Sign Up](sign%20up.png)
 
 ---
+
+### Passenger Flow
+
+#### Request Ride
+![Request Ride](request%20ride.png)
+
+#### Ride Request
+![Ride Request](ride%20req.png)
+
+#### Ride Accepted into Pool
+![Accepted Ride to Pool](acceptedridetopool.png)
+
+#### Ride History
+![Ride History](ride%20history.png)
+
+#### Cancel Ride
+![Cancel Ride](cancel%20ride.png)
+
+---
+
+### Driver Flow
+
+#### Marked Driver Arrived
+![Driver Arrived](marked%20arrived.png)
+
+#### Driver Started Ride
+![Drive Started](drive%20started.png)
+
+#### Completed Pool
+![Completed Pool](completed%20pool.png)
+
+---
+
+### Architecture & Database
+
+#### System Architecture
+![System Architecture](archi.png)
+
+#### Database ERD
+![Database ERD](erd-supabase.png)
+
+#### Ride Lifecycle
+![Ride Lifecycle](lifecycle.png)
 
 # Final Submission Checklist
 
