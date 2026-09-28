@@ -45,7 +45,7 @@ export async function api<T = unknown>(
 ): Promise<T> {
   const token = getToken();
 
-  const res = await fetch(`${BASE}api${path}`, {
+  const res = await fetch(`${BASE}/api${path}`, {
     method,
     headers: {
       "Content-Type": "application/json",
