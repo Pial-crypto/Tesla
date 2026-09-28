@@ -100,7 +100,7 @@ setRequests(data.rides ?? []);
     const currentUser = getUser();
 
     if (!currentUser) {
-      router.replace("/login");
+      router.replace("/");
       return;
     }
 
